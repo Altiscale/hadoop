@@ -29,10 +29,13 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 
+import org.apache.hadoop.net.Node;
 import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
@@ -160,6 +163,42 @@ public class TestRMNodeTransitions {
     return event;
   }
   
+  private RMNodeStatusEvent getMockRMNodeStatusEventWithRunningApps() {
+    NodeHeartbeatResponse response = mock(NodeHeartbeatResponse.class);
+
+    NodeHealthStatus healthStatus = mock(NodeHealthStatus.class);
+    Boolean yes = new Boolean(true);
+    doReturn(yes).when(healthStatus).getIsNodeHealthy();
+
+    RMNodeStatusEvent event = mock(RMNodeStatusEvent.class);
+    doReturn(healthStatus).when(event).getNodeHealthStatus();
+    doReturn(response).when(event).getLatestResponse();
+    doReturn(RMNodeEventType.STATUS_UPDATE).when(event).getType();
+    doReturn(getAppIdList()).when(event).getKeepAliveAppIds();
+    return event;
+  }
+
+  private List<ApplicationId> getAppIdList() {
+    List<ApplicationId> appIdList = new ArrayList<ApplicationId>();
+    appIdList.add(BuilderUtils.newApplicationId(0, 0));
+    return appIdList;
+  }
+
+  private RMNodeStatusEvent getMockRMNodeStatusEventWithoutRunningApps() {
+    NodeHeartbeatResponse response = mock(NodeHeartbeatResponse.class);
+
+    NodeHealthStatus healthStatus = mock(NodeHealthStatus.class);
+    Boolean yes = new Boolean(true);
+    doReturn(yes).when(healthStatus).getIsNodeHealthy();
+
+    RMNodeStatusEvent event = mock(RMNodeStatusEvent.class);
+    doReturn(healthStatus).when(event).getNodeHealthStatus();
+    doReturn(response).when(event).getLatestResponse();
+    doReturn(RMNodeEventType.STATUS_UPDATE).when(event).getType();
+    doReturn(null).when(event).getKeepAliveAppIds();
+    return event;
+  }
+
   @Test (timeout = 5000)
   public void testExpiredContainer() {
     // Start the node
@@ -187,7 +226,33 @@ public class TestRMNodeTransitions {
      */
     verify(scheduler,times(2)).handle(any(NodeUpdateSchedulerEvent.class));     
   }
-  
+
+  @Test
+  public void testStatusUpdateOnDecommissioningNode(){
+    RMNodeImpl node = getDecommissioningNode();
+    Assert.assertEquals(NodeState.DECOMMISSIONING, node.getState());
+    // Verify node in DECOMMISSIONING won't be changed by status update
+    // with running apps
+    RMNodeStatusEvent statusEvent = getMockRMNodeStatusEventWithRunningApps();
+    node.handle(statusEvent);
+    Assert.assertEquals(NodeState.DECOMMISSIONING, node.getState());
+
+    // Verify node in DECOMMISSIONING will be changed by status update
+    // without running apps
+    statusEvent = getMockRMNodeStatusEventWithoutRunningApps();
+    node.handle(statusEvent);
+    Assert.assertEquals(NodeState.DECOMMISSIONED, node.getState());
+  }
+
+  @Test
+  public void testRecommissionNode(){
+    RMNodeImpl node = getDecommissioningNode();
+    Assert.assertEquals(NodeState.DECOMMISSIONING, node.getState());
+    node.handle(new RMNodeEvent(node.getNodeID(),
+        RMNodeEventType.RECOMMISSION));
+    Assert.assertEquals(NodeState.RUNNING, node.getState());
+  }
+
   @Test (timeout = 5000)
   public void testContainerUpdate() throws InterruptedException{
     //Start the node
@@ -245,9 +310,9 @@ public class TestRMNodeTransitions {
     Assert.assertEquals(completedContainerIdFromNode2_1,completedContainers.get(0)
         .getContainerId()); 
     Assert.assertEquals(completedContainerIdFromNode2_2,completedContainers.get(1)
-        .getContainerId());   
+        .getContainerId());
   }
-  
+
   @Test (timeout = 5000)
   public void testStatusChange(){
     //Start the node
@@ -284,7 +349,7 @@ public class TestRMNodeTransitions {
     node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.EXPIRE));
     Assert.assertEquals(0, node.getQueueSize());
   }
-  
+
   @Test
   public void testRunningExpire() {
     RMNodeImpl node = getRunningNode();
@@ -326,7 +391,7 @@ public class TestRMNodeTransitions {
         initialRebooted, cm.getNumRebootedNMs());
     Assert.assertEquals(NodeState.LOST, node.getState());
   }
-  
+
   @Test
   public void testUnhealthyExpireForSchedulerRemove() {
     RMNodeImpl node = getUnhealthyNode();
@@ -359,6 +424,28 @@ public class TestRMNodeTransitions {
   }
 
   @Test
+  public void testDecommissionOnDecommissioningNode() {
+    RMNodeImpl node = getDecommissioningNode();
+    ClusterMetrics cm = ClusterMetrics.getMetrics();
+    int initialActive = cm.getNumActiveNMs();
+    int initialLost = cm.getNumLostNMs();
+    int initialUnhealthy = cm.getUnhealthyNMs();
+    int initialDecommissioned = cm.getNumDecommisionedNMs();
+    int initialRebooted = cm.getNumRebootedNMs();
+    node.handle(new RMNodeEvent(node.getNodeID(),
+        RMNodeEventType.DECOMMISSION));
+    Assert.assertEquals("Active Nodes", initialActive - 1, cm.getNumActiveNMs());
+    Assert.assertEquals("Lost Nodes", initialLost, cm.getNumLostNMs());
+    Assert.assertEquals("Unhealthy Nodes",
+        initialUnhealthy, cm.getUnhealthyNMs());
+    Assert.assertEquals("Decommissioned Nodes",
+        initialDecommissioned + 1, cm.getNumDecommisionedNMs());
+    Assert.assertEquals("Rebooted Nodes",
+        initialRebooted, cm.getNumRebootedNMs());
+    Assert.assertEquals(NodeState.DECOMMISSIONED, node.getState());
+  }
+
+  @Test
   public void testUnhealthyDecommission() {
     RMNodeImpl node = getUnhealthyNode();
     ClusterMetrics cm = ClusterMetrics.getMetrics();
@@ -369,6 +456,29 @@ public class TestRMNodeTransitions {
     int initialRebooted = cm.getNumRebootedNMs();
     node.handle(new RMNodeEvent(node.getNodeID(),
         RMNodeEventType.DECOMMISSION));
+    Assert.assertEquals("Active Nodes", initialActive, cm.getNumActiveNMs());
+    Assert.assertEquals("Lost Nodes", initialLost, cm.getNumLostNMs());
+    Assert.assertEquals("Unhealthy Nodes",
+        initialUnhealthy - 1, cm.getUnhealthyNMs());
+    Assert.assertEquals("Decommissioned Nodes",
+        initialDecommissioned + 1, cm.getNumDecommisionedNMs());
+    Assert.assertEquals("Rebooted Nodes",
+        initialRebooted, cm.getNumRebootedNMs());
+    Assert.assertEquals(NodeState.DECOMMISSIONED, node.getState());
+  }
+
+  // Test Decommissioning on a unhealthy node will make it decommissioned.
+  @Test
+  public void testUnhealthyDecommissioning() {
+    RMNodeImpl node = getUnhealthyNode();
+    ClusterMetrics cm = ClusterMetrics.getMetrics();
+    int initialActive = cm.getNumActiveNMs();
+    int initialLost = cm.getNumLostNMs();
+    int initialUnhealthy = cm.getUnhealthyNMs();
+    int initialDecommissioned = cm.getNumDecommisionedNMs();
+    int initialRebooted = cm.getNumRebootedNMs();
+    node.handle(new RMNodeEvent(node.getNodeID(),
+        RMNodeEventType.DECOMMISSION_WITH_TIMEOUT));
     Assert.assertEquals("Active Nodes", initialActive, cm.getNumActiveNMs());
     Assert.assertEquals("Lost Nodes", initialLost, cm.getNumLostNMs());
     Assert.assertEquals("Unhealthy Nodes",
@@ -424,15 +534,29 @@ public class TestRMNodeTransitions {
     Assert.assertEquals(NodeState.REBOOTED, node.getState());
   }
 
+  @Test
+  public void testNMShutdown() {
+    RMNodeImpl node = getRunningNode();
+    node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.SHUTDOWN));
+    Assert.assertEquals(NodeState.SHUTDOWN, node.getState());
+  }
+
+  @Test
+  public void testUnhealthyNMShutdown() {
+    RMNodeImpl node = getUnhealthyNode();
+    node.handle(new RMNodeEvent(node.getNodeID(), RMNodeEventType.SHUTDOWN));
+    Assert.assertEquals(NodeState.SHUTDOWN, node.getState());
+  }
+
   @Test(timeout=20000)
   public void testUpdateHeartbeatResponseForCleanup() {
     RMNodeImpl node = getRunningNode();
     NodeId nodeId = node.getNodeID();
 
     // Expire a container
-		ContainerId completedContainerId = BuilderUtils.newContainerId(
-				BuilderUtils.newApplicationAttemptId(
-						BuilderUtils.newApplicationId(0, 0), 0), 0);
+    ContainerId completedContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+            BuilderUtils.newApplicationId(0, 0), 0), 0);
     node.handle(new RMNodeCleanContainerEvent(nodeId, completedContainerId));
     Assert.assertEquals(1, node.getContainersToCleanUp().size());
 
@@ -457,6 +581,35 @@ public class TestRMNodeTransitions {
     Assert.assertEquals(finishedAppId, hbrsp.getApplicationsToCleanup().get(0));
   }
 
+  @Test(timeout=20000)
+  public void testUpdateHeartbeatResponseForAppLifeCycle() {
+    RMNodeImpl node = getRunningNode();
+    NodeId nodeId = node.getNodeID();
+
+    ApplicationId runningAppId = BuilderUtils.newApplicationId(0, 1);
+    // Create a running container
+    ContainerId runningContainerId = BuilderUtils.newContainerId(
+        BuilderUtils.newApplicationAttemptId(
+        runningAppId, 0), 0);
+
+    ContainerStatus status = ContainerStatus.newInstance(runningContainerId,
+        ContainerState.RUNNING, "", 0);
+    List<ContainerStatus> statusList = new ArrayList<ContainerStatus>();
+    statusList.add(status);
+    NodeHealthStatus nodeHealth = NodeHealthStatus.newInstance(true,
+        "", System.currentTimeMillis());
+    node.handle(new RMNodeStatusEvent(nodeId, nodeHealth,
+        statusList, null, null));
+
+    Assert.assertEquals(1, node.getRunningApps().size());
+
+    // Finish an application
+    ApplicationId finishedAppId = runningAppId;
+    node.handle(new RMNodeCleanAppEvent(nodeId, finishedAppId));
+    Assert.assertEquals(1, node.getAppsToCleanup().size());
+    Assert.assertEquals(0, node.getRunningApps().size());
+  }
+
   private RMNodeImpl getRunningNode() {
     return getRunningNode(null);
   }
@@ -471,6 +624,14 @@ public class TestRMNodeTransitions {
     return node;
   }
 
+  private RMNodeImpl getDecommissioningNode() {
+    RMNodeImpl node = getRunningNode();
+    node.handle(new RMNodeEvent(node.getNodeID(),
+        RMNodeEventType.DECOMMISSION_WITH_TIMEOUT));
+    Assert.assertEquals(NodeState.DECOMMISSIONING, node.getState());
+    return node;
+  }
+
   private RMNodeImpl getUnhealthyNode() {
     RMNodeImpl node = getRunningNode();
     NodeHealthStatus status = NodeHealthStatus.newInstance(false, "sick",
@@ -481,20 +642,19 @@ public class TestRMNodeTransitions {
     return node;
   }
 
-
   private RMNodeImpl getNewNode() {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, null, null);
     return node;
   }
-  
+
   private RMNodeImpl getNewNode(Resource capability) {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
     RMNodeImpl node = new RMNodeImpl(nodeId, rmContext, null, 0, 0, null, 
         capability, null);
     return node;
   }
-  
+
   private RMNodeImpl getRebootedNode() {
     NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
     Resource capability = Resource.newInstance(4096, 4);
@@ -554,7 +714,39 @@ public class TestRMNodeTransitions {
     Assert.assertEquals(NodesListManagerEventType.NODE_USABLE,
         nodesListManagerEvent.getType());
   }
-  
+
+  @Test
+  public void testReconnectOnDecommissioningNode() {
+    RMNodeImpl node = getDecommissioningNode();
+
+    // Reconnect event with running app
+    node.handle(new RMNodeReconnectEvent(node.getNodeID(), node,
+        getAppIdList(), null));
+    // still decommissioning
+    Assert.assertEquals(NodeState.DECOMMISSIONING, node.getState());
+
+    // Reconnect event without any running app
+    node.handle(new RMNodeReconnectEvent(node.getNodeID(), node, null, null));
+    Assert.assertEquals(NodeState.DECOMMISSIONED, node.getState());
+  }
+
+  @Test
+  public void testReconnectWithNewPortOnDecommissioningNode() {
+    RMNodeImpl node = getDecommissioningNode();
+    Random r= new Random();
+    node.setHttpPort(r.nextInt(10000));
+    // Reconnect event with running app
+    node.handle(new RMNodeReconnectEvent(node.getNodeID(), node,
+        getAppIdList(), null));
+    // still decommissioning
+    Assert.assertEquals(NodeState.DECOMMISSIONING, node.getState());
+
+    node.setHttpPort(r.nextInt(10000));
+    // Reconnect event without any running app
+    node.handle(new RMNodeReconnectEvent(node.getNodeID(), node, null, null));
+    Assert.assertEquals(NodeState.DECOMMISSIONED, node.getState());
+  }
+
   @Test
   public void testResourceUpdateOnRunningNode() {
     RMNodeImpl node = getRunningNode();
@@ -562,18 +754,23 @@ public class TestRMNodeTransitions {
     assertEquals("Memory resource is not match.", oldCapacity.getMemory(), 4096);
     assertEquals("CPU resource is not match.", oldCapacity.getVirtualCores(), 4);
     node.handle(new RMNodeResourceUpdateEvent(node.getNodeID(),
-        ResourceOption.newInstance(Resource.newInstance(2048, 2), 
+        ResourceOption.newInstance(Resource.newInstance(2048, 2),
             RMNode.OVER_COMMIT_TIMEOUT_MILLIS_DEFAULT)));
     Resource newCapacity = node.getTotalCapability();
     assertEquals("Memory resource is not match.", newCapacity.getMemory(), 2048);
     assertEquals("CPU resource is not match.", newCapacity.getVirtualCores(), 2);
-    
+
     Assert.assertEquals(NodeState.RUNNING, node.getState());
     Assert.assertNotNull(nodesListManagerEvent);
     Assert.assertEquals(NodesListManagerEventType.NODE_USABLE,
         nodesListManagerEvent.getType());
   }
-  
+
+  @Test
+  public void testDecommissioningOnRunningNode(){
+    getDecommissioningNode();
+  }
+
   @Test
   public void testResourceUpdateOnNewNode() {
     RMNodeImpl node = getNewNode(Resource.newInstance(4096, 4));
@@ -589,7 +786,7 @@ public class TestRMNodeTransitions {
     
     Assert.assertEquals(NodeState.NEW, node.getState());
   }
-  
+
   @Test
   public void testResourceUpdateOnRebootedNode() {
     RMNodeImpl node = getRebootedNode();
@@ -604,6 +801,17 @@ public class TestRMNodeTransitions {
     assertEquals("CPU resource is not match.", newCapacity.getVirtualCores(), 2);
     
     Assert.assertEquals(NodeState.REBOOTED, node.getState());
+  }
+
+  //Test unhealthy report on a decommissioning node will make it decommissioned.
+  @Test
+  public void testDecommissioningUnhealthy() {
+    RMNodeImpl node = getDecommissioningNode();
+    NodeHealthStatus status = NodeHealthStatus.newInstance(false, "sick",
+        System.currentTimeMillis());
+    node.handle(new RMNodeStatusEvent(node.getNodeID(), status,
+        new ArrayList<ContainerStatus>(), null, null));
+    Assert.assertEquals(NodeState.DECOMMISSIONED, node.getState());
   }
 
   @Test

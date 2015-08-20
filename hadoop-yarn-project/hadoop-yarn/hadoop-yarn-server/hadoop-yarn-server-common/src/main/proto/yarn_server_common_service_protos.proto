@@ -43,6 +43,13 @@ message RegisterNodeManagerResponseProto {
   optional string rm_version = 6;
 }
 
+message UnRegisterNodeManagerRequestProto {
+  optional NodeIdProto node_id = 1;
+}
+
+message UnRegisterNodeManagerResponseProto {
+}
+
 message NodeHeartbeatRequestProto {
   optional NodeStatusProto node_status = 1;
   optional MasterKeyProto last_known_container_token_master_key = 2;
