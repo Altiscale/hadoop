@@ -169,6 +169,9 @@ Release 2.7.1 - 2015-06-28
     YARN-3764. CapacityScheduler should forbid moving LeafQueue from one parent
     to another. (Wangda Tan via jianhe)
 
+    YARN-3021. YARN's delegation-token handling disallows certain trust setups
+    to operate properly over DistCp. (Yongjun Zhang via jianhe)
+
     YARN-3804. Both RM are on standBy state when kerberos user not in yarn.admin.acl
     (Varun Saxena via xgong)
 

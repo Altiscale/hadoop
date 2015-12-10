@@ -18,6 +18,9 @@ Release 2.7.1 - 2015-06-28
 
   NEW FEATURES
 
+    HDFS-9525. hadoop utilities need to support provided delegation tokens
+    (HeeSoo Kim via aw)
+
   IMPROVEMENTS
 
     HDFS-8081. Split getAdditionalBlock() into two methods. (shv)

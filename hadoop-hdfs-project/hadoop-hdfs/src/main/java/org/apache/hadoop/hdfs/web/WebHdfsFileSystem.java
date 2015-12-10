@@ -223,7 +223,7 @@ public class WebHdfsFileSystem extends FileSystem
   // the first getAuthParams() for a non-token op will either get the
   // internal token from the ugi or lazy fetch one
   protected synchronized Token<?> getDelegationToken() throws IOException {
-    if (canRefreshDelegationToken && delegationToken == null) {
+    if (delegationToken == null) {
       Token<?> token = tokenSelector.selectToken(
           new Text(getCanonicalServiceName()), ugi.getTokens());
       // ugi tokens are usually indicative of a task which can't
@@ -233,11 +233,13 @@ public class WebHdfsFileSystem extends FileSystem
         LOG.debug("Using UGI token: " + token);
         canRefreshDelegationToken = false; 
       } else {
-        token = getDelegationToken(null);
-        if (token != null) {
-          LOG.debug("Fetched new token: " + token);
-        } else { // security is disabled
-          canRefreshDelegationToken = false;
+        if (canRefreshDelegationToken) {
+          token = getDelegationToken(null);
+          if (token != null) {
+            LOG.debug("Fetched new token: " + token);
+          } else { // security is disabled
+            canRefreshDelegationToken = false;
+          }
         }
       }
       setDelegationToken(token);
@@ -249,6 +251,7 @@ public class WebHdfsFileSystem extends FileSystem
   synchronized boolean replaceExpiredDelegationToken() throws IOException {
     boolean replaced = false;
     if (canRefreshDelegationToken) {
+      this.delegationToken = null;
       Token<?> token = getDelegationToken(null);
       LOG.debug("Replaced expired token: " + token);
       setDelegationToken(token);
@@ -1289,10 +1292,11 @@ public class WebHdfsFileSystem extends FileSystem
     final HttpOpParam.Op op = GetOpParam.Op.LISTSTATUS;
     return new FsPathResponseRunner<FileStatus[]>(op, f) {
       @Override
-      FileStatus[] decodeResponse(Map<?,?> json) {
-        final Map<?, ?> rootmap = (Map<?, ?>)json.get(FileStatus.class.getSimpleName() + "es");
-        final List<?> array = JsonUtil.getList(
-            rootmap, FileStatus.class.getSimpleName());
+      FileStatus[] decodeResponse(Map<?, ?> json) {
+        final Map<?, ?> rootmap =
+            (Map<?, ?>)json.get(FileStatus.class.getSimpleName() + "es");
+        final List<?> array = JsonUtil.getList(rootmap,
+            FileStatus.class.getSimpleName());
 
         //convert FileStatus
         final FileStatus[] statuses = new FileStatus[array.size()];
@@ -1307,18 +1311,34 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
-  public Token<DelegationTokenIdentifier> getDelegationToken(
+  public synchronized Token<DelegationTokenIdentifier> getDelegationToken(
       final String renewer) throws IOException {
     final HttpOpParam.Op op = GetOpParam.Op.GETDELEGATIONTOKEN;
-    Token<DelegationTokenIdentifier> token =
-        new FsPathResponseRunner<Token<DelegationTokenIdentifier>>(
-            op, null, new RenewerParam(renewer)) {
-      @Override
-      Token<DelegationTokenIdentifier> decodeResponse(Map<?,?> json)
-          throws IOException {
-        return JsonUtil.toDelegationToken(json);
-      }
-    }.run();
+    Token<DelegationTokenIdentifier> token = null;
+
+    if (delegationToken == null) {
+      token =
+          new FsPathResponseRunner<Token<DelegationTokenIdentifier>>(
+              op, null, new RenewerParam(renewer)) {
+          @Override
+          Token<DelegationTokenIdentifier> decodeResponse(Map<?, ?> json)
+              throws IOException {
+            return JsonUtil.toDelegationToken(json);
+          }
+        }.run();
+    } else {
+      token =
+          new FsPathResponseRunner<Token<DelegationTokenIdentifier>>(
+              op, null, new RenewerParam(renewer),
+              new DelegationParam(delegationToken.encodeToUrlString())) {
+          @Override
+          Token<DelegationTokenIdentifier> decodeResponse(Map<?, ?> json)
+              throws IOException {
+            return JsonUtil.toDelegationToken(json);
+          }
+        }.run();
+    }
+
     if (token != null) {
       token.setService(tokenServiceName);
     } else {
@@ -1346,13 +1366,26 @@ public class WebHdfsFileSystem extends FileSystem
   public synchronized long renewDelegationToken(final Token<?> token
       ) throws IOException {
     final HttpOpParam.Op op = PutOpParam.Op.RENEWDELEGATIONTOKEN;
-    return new FsPathResponseRunner<Long>(op, null,
-        new TokenArgumentParam(token.encodeToUrlString())) {
-      @Override
-      Long decodeResponse(Map<?,?> json) throws IOException {
-        return ((Number) json.get("long")).longValue();
-      }
-    }.run();
+
+    if (delegationToken == null) {
+      return new FsPathResponseRunner<Long>(op, null,
+          new TokenArgumentParam(token.encodeToUrlString())) {
+        @Override
+        Long decodeResponse(Map<?, ?> json) throws IOException {
+          return ((Number) json.get("long")).longValue();
+        }
+      }.run();
+    } else {
+      return new FsPathResponseRunner<Long>(op, null,
+          new TokenArgumentParam(token.encodeToUrlString()),
+          new DelegationParam(delegationToken.encodeToUrlString())) {
+        @Override
+        Long decodeResponse(Map<?, ?> json) throws IOException {
+          return ((Number) json.get("long")).longValue();
+        }
+      }.run();
+    }
+
   }
 
   @Override
