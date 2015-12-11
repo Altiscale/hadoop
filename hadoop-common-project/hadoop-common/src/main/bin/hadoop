@@ -38,6 +38,7 @@ function print_usage(){
   echo "                             YARN applications, not this command."
   echo "  checknative [-a|-h]  check native hadoop and compression libraries availability"
   echo "  distcp <srcurl> <desturl> copy file or directories recursively"
+  echo "  dtutil <subcommand> <options> manage delegation tokens"
   echo "  envvars              display computed Hadoop environment variables"
   echo "  archive -archiveName NAME -p <parent path> <src>* <dest> create a hadoop archive"
   echo "  classpath            prints the class path needed to get the"
@@ -115,6 +116,8 @@ case $COMMAND in
     elif [ "$COMMAND" = "distcp" ] ; then
       CLASS=org.apache.hadoop.tools.DistCp
       CLASSPATH=${CLASSPATH}:${TOOL_PATH}
+    elif [ "$COMMAND" = "dtutil" ] ; then
+      CLASS=org.apache.hadoop.security.token.DtUtilShell
     elif [ "$COMMAND" = "daemonlog" ] ; then
       CLASS=org.apache.hadoop.log.LogLevel
     elif [ "$COMMAND" = "envvars" ] ; then
