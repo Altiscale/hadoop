@@ -18,6 +18,7 @@
 package org.apache.hadoop.security;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_TOKEN_FILES;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import java.io.File;
@@ -807,6 +808,26 @@ public class UserGroupInformation {
         proxyUser = System.getProperty(HADOOP_PROXY_USER);
       }
       loginUser = proxyUser == null ? realUser : createProxyUser(proxyUser, realUser);
+
+      String tokenFileLocation = System.getProperty(HADOOP_TOKEN_FILES);
+      if (tokenFileLocation == null) {
+        tokenFileLocation = conf.get(HADOOP_TOKEN_FILES);
+      }
+      if (tokenFileLocation != null) {
+        String[] tokenFileNames = tokenFileLocation.split("\\s*,\\s*+");
+        for (String tokenFileName: tokenFileNames) {
+          if (tokenFileName.length() > 0) {
+            File tokenFile = new File(tokenFileName);
+            if (tokenFile.exists() && tokenFile.isFile()) {
+              Credentials cred = Credentials.readTokenStorageFile(
+                  tokenFile, conf);
+              loginUser.addCredentials(cred);
+            } else {
+              LOG.info("tokenFile("+tokenFileName+") does not exist");
+            }
+          }
+        }
+      }
 
       String fileLocation = System.getenv(HADOOP_TOKEN_FILE_LOCATION);
       if (fileLocation != null) {

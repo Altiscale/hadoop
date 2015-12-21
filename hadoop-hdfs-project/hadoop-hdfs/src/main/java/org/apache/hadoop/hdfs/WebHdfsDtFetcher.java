@@ -15,27 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.web.resources;
 
-/** Represents delegation token used for authentication. */
-public class DelegationParam extends StringParam {
-  /** Parameter name. */
-  public static final String NAME = "delegation";
-  /** Default parameter value. */
-  public static final String DEFAULT = "";
+package org.apache.hadoop.hdfs;
 
-  private static final Domain DOMAIN = new Domain(NAME, null);
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
-  /**
-   * Constructor.
-   * @param str a string representation of the parameter value.
-   */
-  public DelegationParam(final String str) {
-    super(DOMAIN, str != null && !str.equals(DEFAULT)? str: null);
-  }
+import org.apache.hadoop.io.Text;
+
+/**
+ *  DtFetcher for WebHdfsFileSystem using the base class HdfsDtFetcher impl.
+ */
+public class WebHdfsDtFetcher extends HdfsDtFetcher {
+  private static final Log LOG = LogFactory.getLog(WebHdfsDtFetcher.class);
+
+  private static final String SERVICE_NAME = "webhdfs";
 
   @Override
-  public String getName() {
-    return NAME;
+  public Text getServiceName() {
+    return new Text(SERVICE_NAME);
   }
 }
