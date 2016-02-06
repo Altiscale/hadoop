@@ -1,22 +1,5 @@
 Hadoop Change Log
 
-Release 2.7.2 - UNRELEASED
-
-Release 2.7.2 - 2016-01-25
-
-  INCOMPATIBLE CHANGES
-
-  NEW FEATURES
-
-  IMPROVEMENTS
-  
-    HADOOP-12548. Read s3a creds from a Credential Provider. 
-    Contributed by Larry McCay.
-
-  OPTIMIZATIONS
-
-  BUG FIXES
-
 Release 2.7.1 - 2015-06-28
 
   INCOMPATIBLE CHANGES
@@ -24,6 +7,11 @@ Release 2.7.1 - 2015-06-28
   NEW FEATURES
 
   IMPROVEMENTS
+
+    HADOOP-12292. Make use of DeleteObjects optional. (Thomas Demoor via stevel)
+  
+    HADOOP-12548. Read s3a creds from a Credential Provider. 
+    Contributed by Larry McCay.
 
     HADOOP-12103. Small refactoring of DelegationTokenAuthenticationFilter to
     allow code sharing. (Yongjun Zhang)

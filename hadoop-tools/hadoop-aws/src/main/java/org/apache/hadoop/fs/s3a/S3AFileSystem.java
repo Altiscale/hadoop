@@ -41,6 +41,7 @@ import com.amazonaws.auth.AWSCredentialsProviderChain;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
@@ -85,6 +86,7 @@ public class S3AFileSystem extends FileSystem {
   private String bucket;
   private int maxKeys;
   private long partSize;
+  private boolean enableMultiObjectsDelete;
   private TransferManager transfers;
   private ThreadPoolExecutor threadPoolExecutor;
   private long multiPartThreshold;
@@ -294,7 +296,47 @@ public class S3AFileSystem extends FileSystem {
     }
   }
 
+<<<<<<< HEAD
   private void initTransferManager() {
+=======
+    maxKeys = conf.getInt(MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS);
+    partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
+    multiPartThreshold = conf.getLong(MIN_MULTIPART_THRESHOLD,
+      DEFAULT_MIN_MULTIPART_THRESHOLD);
+    enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
+
+    if (partSize < 5 * 1024 * 1024) {
+      LOG.error(MULTIPART_SIZE + " must be at least 5 MB");
+      partSize = 5 * 1024 * 1024;
+    }
+
+    if (multiPartThreshold < 5 * 1024 * 1024) {
+      LOG.error(MIN_MULTIPART_THRESHOLD + " must be at least 5 MB");
+      multiPartThreshold = 5 * 1024 * 1024;
+    }
+
+    int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
+    int coreThreads = conf.getInt(CORE_THREADS, DEFAULT_CORE_THREADS);
+    if (maxThreads == 0) {
+      maxThreads = Runtime.getRuntime().availableProcessors() * 8;
+    }
+    if (coreThreads == 0) {
+      coreThreads = Runtime.getRuntime().availableProcessors() * 8;
+    }
+    long keepAliveTime = conf.getLong(KEEPALIVE_TIME, DEFAULT_KEEPALIVE_TIME);
+    LinkedBlockingQueue<Runnable> workQueue =
+      new LinkedBlockingQueue<>(maxThreads *
+        conf.getInt(MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS));
+    threadPoolExecutor = new ThreadPoolExecutor(
+        coreThreads,
+        maxThreads,
+        keepAliveTime,
+        TimeUnit.SECONDS,
+        workQueue,
+        newDaemonThreadFactory("s3a-transfer-shared-"));
+    threadPoolExecutor.allowCoreThreadTimeOut(true);
+
+>>>>>>> 60474a7... HADOOP-12292. Make use of DeleteObjects optional.  (Thomas Demoor via stevel)
     TransferManagerConfiguration transferConfiguration = new TransferManagerConfiguration();
     transferConfiguration.setMinimumUploadPartSize(partSize);
     transferConfiguration.setMultipartUploadThreshold(multiPartThreshold);
@@ -621,11 +663,7 @@ public class S3AFileSystem extends FileSystem {
           copyFile(summary.getKey(), newDstKey);
 
           if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
-            DeleteObjectsRequest deleteRequest =
-                new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
-            s3.deleteObjects(deleteRequest);
-            statistics.incrementWriteOps(1);
-            keysToDelete.clear();
+            removeKeys(keysToDelete, true);
           }
         }
 
@@ -633,11 +671,8 @@ public class S3AFileSystem extends FileSystem {
           objects = s3.listNextBatchOfObjects(objects);
           statistics.incrementReadOps(1);
         } else {
-          if (keysToDelete.size() > 0) {
-            DeleteObjectsRequest deleteRequest =
-                new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
-            s3.deleteObjects(deleteRequest);
-            statistics.incrementWriteOps(1);
+          if (!keysToDelete.isEmpty()) {
+            removeKeys(keysToDelete, false);
           }
           break;
         }
@@ -649,6 +684,36 @@ public class S3AFileSystem extends FileSystem {
       createFakeDirectoryIfNecessary(src.getParent());
     }
     return true;
+  }
+
+  /**
+   * A helper method to delete a list of keys on a s3-backend.
+   *
+   * @param keysToDelete collection of keys to delete on the s3-backend
+   * @param clearKeys clears the keysToDelete-list after processing the list
+   *            when set to true
+   */
+  private void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+          boolean clearKeys) {
+    if (enableMultiObjectsDelete) {
+      DeleteObjectsRequest deleteRequest
+          = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
+      s3.deleteObjects(deleteRequest);
+      statistics.incrementWriteOps(1);
+    } else {
+      int writeops = 0;
+
+      for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
+        s3.deleteObject(
+            new DeleteObjectRequest(bucket, keyVersion.getKey()));
+        writeops++;
+      }
+
+      statistics.incrementWriteOps(writeops);
+    }
+    if (clearKeys) {
+      keysToDelete.clear();
+    }
   }
 
   /** Delete a file.
@@ -725,11 +790,7 @@ public class S3AFileSystem extends FileSystem {
             }
 
             if (keys.size() == MAX_ENTRIES_TO_DELETE) {
-              DeleteObjectsRequest deleteRequest =
-                  new DeleteObjectsRequest(bucket).withKeys(keys);
-              s3.deleteObjects(deleteRequest);
-              statistics.incrementWriteOps(1);
-              keys.clear();
+              removeKeys(keys, true);
             }
           }
 
@@ -738,10 +799,7 @@ public class S3AFileSystem extends FileSystem {
             statistics.incrementReadOps(1);
           } else {
             if (!keys.isEmpty()) {
-              DeleteObjectsRequest deleteRequest =
-                  new DeleteObjectsRequest(bucket).withKeys(keys);
-              s3.deleteObjects(deleteRequest);
-              statistics.incrementWriteOps(1);
+              removeKeys(keys, false);
             }
             break;
           }
