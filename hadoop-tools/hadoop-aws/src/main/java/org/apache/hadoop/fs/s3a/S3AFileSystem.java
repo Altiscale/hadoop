@@ -154,7 +154,7 @@ public class S3AFileSystem extends FileSystem {
   public void initialize(URI name, Configuration conf) throws IOException {
     super.initialize(name, conf);
 
-    uri = URI.create(name.getScheme() + "://" + name.getRawAuthority());
+    uri = URI.create(name.getScheme() + "://" + name.getAuthority());
     workingDir = new Path("/user", System.getProperty("user.name")).makeQualified(this.uri,
         this.getWorkingDirectory());
 
@@ -170,16 +170,16 @@ public class S3AFileSystem extends FileSystem {
     bucket = name.getHost();
 
     ClientConfiguration awsConf = new ClientConfiguration();
-    awsConf.setMaxConnections(conf.getInt(MAXIMUM_CONNECTIONS,
+    awsConf.setMaxConnections(conf.getInt(MAXIMUM_CONNECTIONS, 
       DEFAULT_MAXIMUM_CONNECTIONS));
     boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
         DEFAULT_SECURE_CONNECTIONS);
     awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
-    awsConf.setMaxErrorRetry(conf.getInt(MAX_ERROR_RETRIES,
+    awsConf.setMaxErrorRetry(conf.getInt(MAX_ERROR_RETRIES, 
       DEFAULT_MAX_ERROR_RETRIES));
     awsConf.setConnectionTimeout(conf.getInt(ESTABLISH_TIMEOUT,
         DEFAULT_ESTABLISH_TIMEOUT));
-    awsConf.setSocketTimeout(conf.getInt(SOCKET_TIMEOUT,
+    awsConf.setSocketTimeout(conf.getInt(SOCKET_TIMEOUT, 
       DEFAULT_SOCKET_TIMEOUT));
     String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
     if(!signerOverride.isEmpty()) {
@@ -207,19 +207,25 @@ public class S3AFileSystem extends FileSystem {
     }
 
     int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
-    if (maxThreads < 2) {
-      LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
-      maxThreads = 2;
+    int coreThreads = conf.getInt(CORE_THREADS, DEFAULT_CORE_THREADS);
+    if (maxThreads == 0) {
+      maxThreads = Runtime.getRuntime().availableProcessors() * 8;
     }
-    int totalTasks = conf.getInt(MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS);
-    if (totalTasks < 1) {
-      LOG.warn(MAX_TOTAL_TASKS + "must be at least 1: forcing to 1.");
-      totalTasks = 1;
+    if (coreThreads == 0) {
+      coreThreads = Runtime.getRuntime().availableProcessors() * 8;
     }
     long keepAliveTime = conf.getLong(KEEPALIVE_TIME, DEFAULT_KEEPALIVE_TIME);
-    threadPoolExecutor = new BlockingThreadPoolExecutorService(maxThreads,
-        maxThreads + totalTasks, keepAliveTime, TimeUnit.SECONDS,
-        "s3a-transfer-shared");
+    LinkedBlockingQueue<Runnable> workQueue =
+      new LinkedBlockingQueue<>(maxThreads *
+        conf.getInt(MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS));
+    threadPoolExecutor = new ThreadPoolExecutor(
+        coreThreads,
+        maxThreads,
+        keepAliveTime,
+        TimeUnit.SECONDS,
+        workQueue,
+        newDaemonThreadFactory("s3a-transfer-shared-"));
+    threadPoolExecutor.allowCoreThreadTimeOut(true);
 
     initTransferManager();
 
@@ -315,9 +321,9 @@ public class S3AFileSystem extends FileSystem {
   }
 
   private void initMultipartUploads(Configuration conf) {
-    boolean purgeExistingMultipart = conf.getBoolean(PURGE_EXISTING_MULTIPART,
+    boolean purgeExistingMultipart = conf.getBoolean(PURGE_EXISTING_MULTIPART, 
       DEFAULT_PURGE_EXISTING_MULTIPART);
-    long purgeExistingMultipartAge = conf.getLong(PURGE_EXISTING_MULTIPART_AGE,
+    long purgeExistingMultipartAge = conf.getLong(PURGE_EXISTING_MULTIPART_AGE, 
       DEFAULT_PURGE_EXISTING_MULTIPART_AGE);
 
     if (purgeExistingMultipart) {
@@ -377,13 +383,22 @@ public class S3AFileSystem extends FileSystem {
    *
    * @return "s3a"
    */
+  @Override
   public String getScheme() {
     return "s3a";
   }
 
-  /** Returns a URI whose scheme and authority identify this FileSystem.*/
+  /**
+   * Returns a URI whose scheme and authority identify this FileSystem.
+   */
+  @Override
   public URI getUri() {
     return uri;
+  }
+
+  @Override
+  public int getDefaultPort() {
+    return Constants.S3A_DEFAULT_PORT;
   }
 
   /**
@@ -433,7 +448,7 @@ public class S3AFileSystem extends FileSystem {
       throw new FileNotFoundException("Can't open " + f + " because it is a directory");
     }
 
-    return new FSDataInputStream(new S3AInputStream(bucket, pathToKey(f),
+    return new FSDataInputStream(new S3AInputStream(bucket, pathToKey(f), 
       fileStatus.getLen(), s3, statistics));
   }
 
@@ -451,8 +466,10 @@ public class S3AFileSystem extends FileSystem {
    * @throws IOException in the event of IO related errors.
    * @see #setPermission(Path, FsPermission)
    */
-  public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite,
-    int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
+  @Override
+  public FSDataOutputStream create(Path f, FsPermission permission,
+      boolean overwrite, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
     String key = pathToKey(f);
 
     if (!overwrite && exists(f)) {
@@ -466,7 +483,7 @@ public class S3AFileSystem extends FileSystem {
     }
     // We pass null to FSDataOutputStream so it won't count writes that are being buffered to a file
     return new FSDataOutputStream(new S3AOutputStream(getConf(), transfers, this,
-      bucket, key, progress, cannedACL, statistics,
+      bucket, key, progress, cannedACL, statistics, 
       serverSideEncryptionAlgorithm), null);
   }
 
@@ -477,7 +494,7 @@ public class S3AFileSystem extends FileSystem {
    * @param progress for reporting progress if it is not null.
    * @throws IOException indicating that append is not supported.
    */
-  public FSDataOutputStream append(Path f, int bufferSize,
+  public FSDataOutputStream append(Path f, int bufferSize, 
     Progressable progress) throws IOException {
     throw new IOException("Not supported");
   }
@@ -487,8 +504,8 @@ public class S3AFileSystem extends FileSystem {
    * Renames Path src to Path dst.  Can take place on local fs
    * or remote DFS.
    *
-   * Warning: S3 does not support renames. This method does a copy which can
-   * take S3 some time to execute with large files and directories. Since
+   * Warning: S3 does not support renames. This method does a copy which can 
+   * take S3 some time to execute with large files and directories. Since 
    * there is no Progressable passed in, this can time out jobs.
    *
    * Note: This implementation differs with other S3 drivers. Specifically:
@@ -601,7 +618,7 @@ public class S3AFileSystem extends FileSystem {
         return false;
       }
 
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete =
+      List<DeleteObjectsRequest.KeyVersion> keysToDelete = 
         new ArrayList<>();
       if (dstStatus != null && dstStatus.isEmptyDirectory()) {
         // delete unnecessary fake directory.
@@ -707,7 +724,7 @@ public class S3AFileSystem extends FileSystem {
       }
 
       if (!recursive && !status.isEmptyDirectory()) {
-        throw new IOException("Path is a folder: " + f +
+        throw new IOException("Path is a folder: " + f + 
                               " and it is not an empty directory");
       }
 
@@ -738,7 +755,7 @@ public class S3AFileSystem extends FileSystem {
         //request.setDelimiter("/");
         request.setMaxKeys(maxKeys);
 
-        List<DeleteObjectsRequest.KeyVersion> keys =
+        List<DeleteObjectsRequest.KeyVersion> keys = 
           new ArrayList<>();
         ObjectListing objects = s3.listObjects(request);
         statistics.incrementReadOps(1);
@@ -842,7 +859,7 @@ public class S3AFileSystem extends FileSystem {
               LOG.debug("Adding: fd: " + keyPath);
             }
           } else {
-            result.add(new S3AFileStatus(summary.getSize(),
+            result.add(new S3AFileStatus(summary.getSize(), 
                 dateToLong(summary.getLastModified()), keyPath,
                 getDefaultBlockSize(f.makeQualified(uri, workingDir))));
             if (LOG.isDebugEnabled()) {
@@ -910,7 +927,7 @@ public class S3AFileSystem extends FileSystem {
    * @param f path to create
    * @param permission to apply to f
    */
-  // TODO: If we have created an empty file at /foo/bar and we then call
+  // TODO: If we have created an empty file at /foo/bar and we then call 
   // mkdirs for /foo/bar/baz/roo what happens to the empty file /foo/bar/?
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     if (LOG.isDebugEnabled()) {
@@ -933,7 +950,7 @@ public class S3AFileSystem extends FileSystem {
           FileStatus fileStatus = getFileStatus(fPart);
           if (fileStatus.isFile()) {
             throw new FileAlreadyExistsException(String.format(
-                "Can't make directory for path '%s' since it is a file.",
+                "Can't make directory for path '%s' since it is a file.", 
                 fPart));
           }
         } catch (FileNotFoundException fnfe) {
@@ -1039,8 +1056,8 @@ public class S3AFileSystem extends FileSystem {
       if (!objects.getCommonPrefixes().isEmpty()
           || objects.getObjectSummaries().size() > 0) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Found path as directory (with /): " +
-            objects.getCommonPrefixes().size() + "/" +
+          LOG.debug("Found path as directory (with /): " + 
+            objects.getCommonPrefixes().size() + "/" + 
             objects.getObjectSummaries().size());
 
           for (S3ObjectSummary summary : objects.getObjectSummaries()) {
@@ -1053,6 +1070,9 @@ public class S3AFileSystem extends FileSystem {
 
         return new S3AFileStatus(true, false,
             f.makeQualified(uri, workingDir));
+      } else if (key.isEmpty()) {
+        LOG.debug("Found root directory");
+        return new S3AFileStatus(true, true, f.makeQualified(uri, workingDir));
       }
     } catch (AmazonServiceException e) {
       if (e.getStatusCode() != 404) {
@@ -1084,7 +1104,7 @@ public class S3AFileSystem extends FileSystem {
    * @param dst path
    */
   @Override
-  public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path src,
+  public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path src, 
     Path dst) throws IOException {
     String key = pathToKey(dst);
 
