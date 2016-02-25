@@ -296,47 +296,7 @@ public class S3AFileSystem extends FileSystem {
     }
   }
 
-<<<<<<< HEAD
   private void initTransferManager() {
-=======
-    maxKeys = conf.getInt(MAX_PAGING_KEYS, DEFAULT_MAX_PAGING_KEYS);
-    partSize = conf.getLong(MULTIPART_SIZE, DEFAULT_MULTIPART_SIZE);
-    multiPartThreshold = conf.getLong(MIN_MULTIPART_THRESHOLD,
-      DEFAULT_MIN_MULTIPART_THRESHOLD);
-    enableMultiObjectsDelete = conf.getBoolean(ENABLE_MULTI_DELETE, true);
-
-    if (partSize < 5 * 1024 * 1024) {
-      LOG.error(MULTIPART_SIZE + " must be at least 5 MB");
-      partSize = 5 * 1024 * 1024;
-    }
-
-    if (multiPartThreshold < 5 * 1024 * 1024) {
-      LOG.error(MIN_MULTIPART_THRESHOLD + " must be at least 5 MB");
-      multiPartThreshold = 5 * 1024 * 1024;
-    }
-
-    int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
-    int coreThreads = conf.getInt(CORE_THREADS, DEFAULT_CORE_THREADS);
-    if (maxThreads == 0) {
-      maxThreads = Runtime.getRuntime().availableProcessors() * 8;
-    }
-    if (coreThreads == 0) {
-      coreThreads = Runtime.getRuntime().availableProcessors() * 8;
-    }
-    long keepAliveTime = conf.getLong(KEEPALIVE_TIME, DEFAULT_KEEPALIVE_TIME);
-    LinkedBlockingQueue<Runnable> workQueue =
-      new LinkedBlockingQueue<>(maxThreads *
-        conf.getInt(MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS));
-    threadPoolExecutor = new ThreadPoolExecutor(
-        coreThreads,
-        maxThreads,
-        keepAliveTime,
-        TimeUnit.SECONDS,
-        workQueue,
-        newDaemonThreadFactory("s3a-transfer-shared-"));
-    threadPoolExecutor.allowCoreThreadTimeOut(true);
-
->>>>>>> 60474a7... HADOOP-12292. Make use of DeleteObjects optional.  (Thomas Demoor via stevel)
     TransferManagerConfiguration transferConfiguration = new TransferManagerConfiguration();
     transferConfiguration.setMinimumUploadPartSize(partSize);
     transferConfiguration.setMultipartUploadThreshold(multiPartThreshold);
