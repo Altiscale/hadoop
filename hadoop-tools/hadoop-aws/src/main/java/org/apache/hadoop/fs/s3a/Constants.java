@@ -28,7 +28,7 @@ public class Constants {
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
   public static final int DEFAULT_MAXIMUM_CONNECTIONS = 15;
-  
+
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS = "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
@@ -50,7 +50,7 @@ public class Constants {
   // seconds until we give up trying to establish a connection to s3
   public static final String ESTABLISH_TIMEOUT = "fs.s3a.connection.establish.timeout";
   public static final int DEFAULT_ESTABLISH_TIMEOUT = 50000;
-  
+
   // seconds until we give up on a connection to s3
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
   public static final int DEFAULT_SOCKET_TIMEOUT = 50000;
@@ -79,10 +79,13 @@ public class Constants {
   // size of each of or multipart pieces in bytes
   public static final String MULTIPART_SIZE = "fs.s3a.multipart.size";
   public static final long DEFAULT_MULTIPART_SIZE = 104857600; // 100 MB
-  
+
   // minimum size in bytes before we start a multipart uploads or copy
   public static final String MIN_MULTIPART_THRESHOLD = "fs.s3a.multipart.threshold";
   public static final long DEFAULT_MIN_MULTIPART_THRESHOLD = Integer.MAX_VALUE;
+
+  //enable multiobject-delete calls?
+  public static final String ENABLE_MULTI_DELETE = "fs.s3a.multiobjectdelete.enable";
 
   // comma separated list of directories
   public static final String BUFFER_DIR = "fs.s3a.buffer.dir";
@@ -95,7 +98,7 @@ public class Constants {
   public static final String FAST_BUFFER_SIZE = "fs.s3a.fast.buffer.size";
   public static final int DEFAULT_FAST_BUFFER_SIZE = 1048576; //1MB
 
-  // private | public-read | public-read-write | authenticated-read | 
+  // private | public-read | public-read-write | authenticated-read |
   // log-delivery-write | bucket-owner-read | bucket-owner-full-control
   public static final String CANNED_ACL = "fs.s3a.acl.default";
   public static final String DEFAULT_CANNED_ACL = "";
@@ -109,7 +112,7 @@ public class Constants {
   public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 14400;
 
   // s3 server-side encryption
-  public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM = 
+  public static final String SERVER_SIDE_ENCRYPTION_ALGORITHM =
     "fs.s3a.server-side-encryption-algorithm";
 
   //override signature algorithm used for signing requests
@@ -118,4 +121,6 @@ public class Constants {
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
   public static final String FS_S3A = "s3a";
+
+  public static final int S3A_DEFAULT_PORT = -1;
 }
