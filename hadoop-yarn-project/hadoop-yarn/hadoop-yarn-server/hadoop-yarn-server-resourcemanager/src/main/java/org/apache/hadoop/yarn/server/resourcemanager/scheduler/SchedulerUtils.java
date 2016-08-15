@@ -367,6 +367,10 @@ public class SchedulerUtils {
     }
 
     if (labelExpression != null) {
+      if(labelExpression.contains(RMNodeLabelsManager.ANY)) {
+          return true;
+      }
+
       for (String str : labelExpression.split("&&")) {
         if (!str.trim().isEmpty()
             && (nodeLabels == null || !nodeLabels.contains(str.trim()))) {
@@ -403,7 +407,8 @@ public class SchedulerUtils {
         // check node label manager contains this label
         if (null != rmContext) {
           RMNodeLabelsManager nlm = rmContext.getNodeLabelManager();
-          if (nlm != null && !nlm.containsNodeLabel(str)) {
+          if (nlm != null && !nlm.containsNodeLabel(str)
+              && !str.contains(RMNodeLabelsManager.ANY)) {
             return false;
           }
         }
