@@ -367,7 +367,7 @@ public class SchedulerUtils {
     }
 
     if (labelExpression != null) {
-      if(labelExpression.contains(RMNodeLabelsManager.ANY)) {
+      if(labelExpression.equals(RMNodeLabelsManager.ANY)) {
           return true;
       }
 
@@ -408,7 +408,7 @@ public class SchedulerUtils {
         if (null != rmContext) {
           RMNodeLabelsManager nlm = rmContext.getNodeLabelManager();
           if (nlm != null && !nlm.containsNodeLabel(str)
-              && !str.contains(RMNodeLabelsManager.ANY)) {
+              && !str.equals(RMNodeLabelsManager.ANY)) {
             return false;
           }
         }
