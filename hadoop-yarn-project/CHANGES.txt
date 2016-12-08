@@ -18,7 +18,7 @@ Release 2.7.2 - 2016-01-25
     YARN-3967. Fetch the application report from the AHS if the RM does not know about it.
     (Mit Desai via xgong)
 
-    YARN-2801. Add documentation for node labels feature. (Wangda Tan and Naganarasimha 
+    YARN-2801. Add documentation for node labels feature. (Wangda Tan and Naganarasimha
     G R  via ozawa)
 
     YARN-2513. Host framework UIs in YARN for use with the ATS (jeagles)
@@ -30,7 +30,7 @@ Release 2.7.2 - 2016-01-25
     YARN-3793. Several NPEs when deleting local files on NM recovery (Varun
     Saxena via jlowe)
 
-    YARN-3508. Prevent processing preemption events on the main RM dispatcher. 
+    YARN-3508. Prevent processing preemption events on the main RM dispatcher.
     (Varun Saxena via wangda)
 
     YARN-3690. [JDK8] 'mvn site' fails. (Brahma Reddy Battula via aajisaka)
@@ -44,7 +44,7 @@ Release 2.7.2 - 2016-01-25
     YARN-3878. AsyncDispatcher can hang while stopping if it is configured for
     draining events on stop. (Varun Saxena via jianhe)
 
-    YARN-3969. Allow jobs to be submitted to reservation that is active 
+    YARN-3969. Allow jobs to be submitted to reservation that is active
     but does not have any allocations. (subru via curino)
 
     YARN-3925. ContainerLogsUtils#getContainerLogFile fails to read container
@@ -53,7 +53,7 @@ Release 2.7.2 - 2016-01-25
     YARN-3857: Memory leak in ResourceManager with SIMPLE mode.
     (mujunchao via zxu)
 
-    YARN-3893. Both RM in active state when Admin#transitionToActive failure 
+    YARN-3893. Both RM in active state when Admin#transitionToActive failure
     from refeshAll() (Bibin A Chundatt via rohithsharmaks)
 
     YARN-4103. RM WebServices missing scheme for appattempts logLinks.
@@ -85,7 +85,7 @@ Release 2.7.2 - 2016-01-25
     YARN-3619. ContainerMetrics unregisters during getMetrics and leads to
     ConcurrentModificationException (Zhihai Xu via jlowe)
 
-    YARN-4209. RMStateStore FENCED state doesn’t work due to updateFencedState called 
+    YARN-4209. RMStateStore FENCED state doesn’t work due to updateFencedState called
     by stateMachine.doTransition. (Zhihai Xu via rohithsharmaks)
 
     YARN-4281. 2.7 RM app page is broken (Chang Li via jlowe)
@@ -120,7 +120,7 @@ Release 2.7.2 - 2016-01-25
     YARN-4127. RM fail with noAuth error if switched from failover mode to non-failover
     mode. (Varun Saxena via jianhe)
 
-    YARN-4354. Public resource localization fails with NPE. (Jason Lowe via 
+    YARN-4354. Public resource localization fails with NPE. (Jason Lowe via
     junping_du)
 
     YARN-5762. Summarize ApplicationNotFoundException in the RM log (Ravi Prakash)
@@ -158,12 +158,9 @@ Release 2.7.1 - 2015-07-06
 
   BUG FIXES
 
-<<<<<<< HEAD
-=======
     YARN-3487. CapacityScheduler scheduler lock obtained unnecessarily when
     calling getQueue (Jason Lowe via wangda)
 
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     YARN-3462. Patches applied for YARN-2424 are inconsistent between
     trunk and branch-2. (Naganarasimha G R via harsh)
 
@@ -190,14 +187,10 @@ Release 2.7.1 - 2015-07-06
     YARN-3516. killing ContainerLocalizer action doesn't take effect when
     private localizer receives FETCH_FAILURE status.(zhihai xu via xgong)
 
-<<<<<<< HEAD
-    YARN-3485. FairScheduler headroom calculation doesn't consider 
-=======
     YARN-3464. Race condition in LocalizerRunner kills localizer before
     localizing all resources. (Zhihai Xu via kasha)
 
     YARN-3485. FairScheduler headroom calculation doesn't consider
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     maxResources for Fifo and FairShare policies. (kasha)
 
     YARN-3301. Fixed the format issue of the new RM attempt web page.
@@ -215,12 +208,9 @@ Release 2.7.1 - 2015-07-06
     YARN-3434. Interaction between reservations and userlimit can result in
     significant ULF violation. (Thomas Graves via wangda)
 
-<<<<<<< HEAD
-=======
     YARN-3493. RM fails to come up with error "Failed to load/recover state"
     when mem settings are changed. (Jian He via wangda)
 
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     YARN-3626. On Windows localized resources are not moved to the front
     of the classpath when they should be. (Craig Welch via xgong)
 
@@ -235,12 +225,9 @@ Release 2.7.1 - 2015-07-06
     YARN-3677. Fix findbugs warnings in yarn-server-resourcemanager.
     (Vinod Kumar Vavilapalli via ozawa)
 
-<<<<<<< HEAD
-=======
     YARN-2918. RM should not fail on startup if queue's configured labels do
     not exist in cluster-node-labels. (Wangda Tan via jianhe)
 
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     YARN-3681. yarn cmd says "could not find main class 'queue'" in windows.
     (Craig Welch and Varun Saxena via xgong)
 
@@ -265,11 +252,9 @@ Release 2.7.1 - 2015-07-06
     YARN-3686. CapacityScheduler should trim default_node_label_expression.
     (Sunil G via wangda)
 
-<<<<<<< HEAD
     YARN-3753. RM failed to come up with "java.io.IOException: Wait for
     ZKClient creation timed out”. (Jian He via xgong)
 
-=======
     YARN-2900. Application (Attempt and Container) Not Found in AHS results
     in Internal Server Error (500). (Zhijie Shen and Mit Desai via xgong)
 
@@ -285,7 +270,6 @@ Release 2.7.1 - 2015-07-06
     YARN-3733. Fix DominantRC#compare() does not work as expected if
     cluster resource is empty. (Rohith Sharmaks via wangda)
 
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     YARN-3764. CapacityScheduler should forbid moving LeafQueue from one parent
     to another. (Wangda Tan via jianhe)
 
@@ -500,14 +484,12 @@ Release 2.7.0 - 2015-04-20
     YARN-3022. Expose Container resource information from NodeManager for
     monitoring (adhoot via ranter)
 
-<<<<<<< HEAD
-    YARN-3075. NodeLabelsManager implementation to retrieve label to node 
-=======
+    YARN-3075. NodeLabelsManager implementation to retrieve label to node
+
     YARN-3098. Created common QueueCapacities class in Capacity Scheduler to
     track capacities-by-labels of queues. (Wangda Tan via jianhe)
 
     YARN-3075. NodeLabelsManager implementation to retrieve label to node
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     mapping (Varun Saxena via wangda)
 
     YARN-1393. SLS: Add how-to-use instructions. (Wei Yan via kasha)
@@ -677,26 +659,21 @@ Release 2.7.0 - 2015-04-20
     YARN-2931. PublicLocalizer may fail until directory is initialized by
     LocalizeRunner. (Anubhav Dhoot via kasha)
 
-<<<<<<< HEAD
-=======
     YARN-2910. FSLeafQueue can throw ConcurrentModificationException.
     (Wilfred Spiegelenburg via kasha)
 
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     YARN-2930. Fixed TestRMRestart#testRMRestartRecoveringNodeLabelManager
     intermittent failure. (Wangda Tan via jianhe)
 
     YARN-2924. Fixed RMAdminCLI to not convert node labels to lower case.
     (Wangda Tan via jianhe)
 
-<<<<<<< HEAD
-    YARN-2243. Order of arguments for Preconditions.checkNotNull() is wrong in 
-=======
+    YARN-2243. Order of arguments for Preconditions.checkNotNull() is wrong in
+
     YARN-2917. Fixed potential deadlock when system.exit is called in AsyncDispatcher
     (Rohith Sharmaks via jianhe)
 
     YARN-2243. Order of arguments for Preconditions.checkNotNull() is wrong in
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     SchedulerApplicationAttempt ctor. (devaraj)
 
     YARN-2912 Jersey Tests failing with port in use. (varun saxena via stevel)
@@ -713,14 +690,12 @@ Release 2.7.0 - 2015-04-20
     YARN-2944. InMemorySCMStore can not be instantiated with ReflectionUtils#newInstance.
     (Chris Trezzo via kasha)
 
-<<<<<<< HEAD
-    YARN-2675. containersKilled metrics is not updated when the container is killed 
-=======
+    YARN-2675. containersKilled metrics is not updated when the container is killed
+
     YARN-2964. RM prematurely cancels tokens for jobs that submit jobs (oozie)
     (Jian He via jlowe)
 
     YARN-2675. containersKilled metrics is not updated when the container is killed
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     during localization. (Zhihai Xu via kasha)
 
     YARN-2975. FSLeafQueue app lists are accessed without required locks. (kasha)
@@ -730,9 +705,8 @@ Release 2.7.0 - 2015-04-20
 
     YARN-2939. Fix new findbugs warnings in hadoop-yarn-common. (Li Lu via junping_du)
 
-<<<<<<< HEAD
-    YARN-2940. Fix new findbugs warnings in rest of the hadoop-yarn components. (Li Lu 
-=======
+    YARN-2940. Fix new findbugs warnings in rest of the hadoop-yarn components. (Li Lu
+
     YARN-2920. Changed CapacityScheduler to kill containers on nodes where
     node labels are changed. (Wangda Tan via jianhe)
 
@@ -740,7 +714,6 @@ Release 2.7.0 - 2015-04-20
     (Rohith Sharmaks via jianhe)
 
     YARN-2940. Fix new findbugs warnings in rest of the hadoop-yarn components. (Li Lu
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     via junping_du)
 
     YARN-2937. Fixed new findbugs warnings in hadoop-yarn-nodemanager. (Varun Saxena
@@ -854,15 +827,13 @@ Release 2.7.0 - 2015-04-20
     YARN-2809. Implement workaround for linux kernel panic when removing
     cgroup (Nathan Roberts via jlowe)
 
-<<<<<<< HEAD
-    YARN-3160. Fix non-atomic operation on nodeUpdateQueue in RMNodeImpl. 
-=======
+    YARN-3160. Fix non-atomic operation on nodeUpdateQueue in RMNodeImpl.
+
     YARN-2246. Made the proxy tracking URL always be
     http(s)://proxy addr:port/proxy/<appId> to avoid duplicate sections. (Devaraj
     K via zjshen)
 
     YARN-3160. Fix non-atomic operation on nodeUpdateQueue in RMNodeImpl.
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     (Chengbing Liu via junping_du)
 
     YARN-3074. Nodemanager dies when localizer runner tries to write to a full
@@ -904,16 +875,14 @@ Release 2.7.0 - 2015-04-20
     YARN-3247. TestQueueMappings should use CapacityScheduler explicitly.
     (Zhihai Xu via ozawa)
 
-<<<<<<< HEAD
-    YARN-3256. TestClientToAMTokens#testClientTokenRace is not running against 
-    all Schedulers even when using ParameterizedSchedulerTestBase. 
-=======
+    YARN-3256. TestClientToAMTokens#testClientTokenRace is not running against
+    all Schedulers even when using ParameterizedSchedulerTestBase.
+
     YARN-3239. WebAppProxy does not support a final tracking url which has
     query fragments and params (Jian He via jlowe)
 
     YARN-3256. TestClientToAMTokens#testClientTokenRace is not running against
     all Schedulers even when using ParameterizedSchedulerTestBase.
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     (Anubhav Dhoot via devaraj)
 
     YARN-3270. Fix node label expression not getting set in
@@ -924,9 +893,6 @@ Release 2.7.0 - 2015-04-20
 
     YARN-3131. YarnClientImpl should check FAILED and KILLED state in
     submitApplication (Chang Li via jlowe)
-<<<<<<< HEAD
-    
-=======
 
     YARN-3231. FairScheduler: Changing queueMaxRunningApps interferes with pending
     jobs. (Siqi Li via kasha)
@@ -937,7 +903,6 @@ Release 2.7.0 - 2015-04-20
     YARN-3227. Timeline renew delegation token fails when RM user's TGT is expired
     (Zhijie Shen via xgong)
 
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     YARN-3275. CapacityScheduler: Preemption happening on non-preemptable
     queues (Eric Payne via jlowe)
 
@@ -952,9 +917,8 @@ Release 2.7.0 - 2015-04-20
     YARN-3154. Added additional APIs in LogAggregationContext to avoid aggregating
     running logs of application when rolling is enabled. (Xuan Gong via vinodkv)
 
-<<<<<<< HEAD
-    YARN-1453. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in 
-=======
+    YARN-1453. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in
+
     YARN-3267. Timelineserver applies the ACL rules after applying the limit on
     the number of records (Chang Li via jeagles)
 
@@ -962,7 +926,6 @@ Release 2.7.0 - 2015-04-20
     in ATS / RM web ui. (Naganarasimha G R via xgong)
 
     YARN-1453. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
     doc comments. (Akira AJISAKA, Andrew Purtell, and Allen Wittenauer via ozawa)
 
     YARN-3349. Treat all exceptions as failure in
@@ -987,7 +950,7 @@ Release 2.7.0 - 2015-04-20
     YARN-3430. Made headroom data available on app attempt page of RM WebUI.
     (Xuan Gong via zjshen)
 
-    YARN-3466. Fix RM nodes web page to sort by node HTTP-address, #containers 
+    YARN-3466. Fix RM nodes web page to sort by node HTTP-address, #containers
     and node-label column (Jason Lowe via wangda)
 
 Release 2.6.3 - UNRELEASED
@@ -1025,7 +988,7 @@ Release 2.6.3 - UNRELEASED
     YARN-4241. Fix typo of property name in yarn-default.xml.
     (Anthony Rojas via aajisaka)
 
-    YARN-4326. Fix TestDistributedShell timeout as AHS in MiniYarnCluster no longer 
+    YARN-4326. Fix TestDistributedShell timeout as AHS in MiniYarnCluster no longer
     binds to default port 8188. (Meng Ding via wangda)
 
 Release 2.6.2 - 2015-10-28
@@ -1034,7 +997,7 @@ Release 2.6.2 - 2015-10-28
 
   NEW FEATURES
 
-    YARN-2019. Retrospect on decision of making RM crashed if any exception throw 
+    YARN-2019. Retrospect on decision of making RM crashed if any exception throw
     in ZKRMStateStore. (Jian He via junping_du)
 
   IMPROVEMENTS
@@ -1070,10 +1033,10 @@ Release 2.6.2 - 2015-10-28
     YARN-3194. RM should handle NMContainerStatuses sent by NM while
     registering if NM is Reconnected node (Rohith via jlowe)
 
-    YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id 
+    YARN-3896. RMNode transitioned from RUNNING to REBOOTED because its response id
     has not been reset synchronously. (Jun Gong via rohithsharmaks)
 
-    YARN-3798. ZKRMStateStore shouldn't create new session without occurrance of 
+    YARN-3798. ZKRMStateStore shouldn't create new session without occurrance of
     SESSIONEXPIED. (ozawa and Varun Saxena)
 
 Release 2.6.1 - 2015-09-23
@@ -1137,7 +1100,7 @@ Release 2.6.1 - 2015-09-23
     YARN-2874. Dead lock in "DelegationTokenRenewer" which blocks RM to execute
     any further apps. (Naganarasimha G R via kasha)
 
-    YARN-2910. FSLeafQueue can throw ConcurrentModificationException. 
+    YARN-2910. FSLeafQueue can throw ConcurrentModificationException.
     (Wilfred Spiegelenburg via kasha)
 
     YARN-2917. Fixed potential deadlock when system.exit is called in AsyncDispatcher
@@ -1189,10 +1152,10 @@ Release 2.6.1 - 2015-09-23
     YARN-3222. Fixed RMNode to send scheduler events in sequential order when a
     node reconnects. (Rohith Sharma K S via jianhe)
 
-    YARN-3231. FairScheduler: Changing queueMaxRunningApps interferes with pending 
+    YARN-3231. FairScheduler: Changing queueMaxRunningApps interferes with pending
     jobs. (Siqi Li via kasha)
 
-    YARN-3242. Asynchrony in ZK-close can lead to ZKRMStateStore watcher receiving 
+    YARN-3242. Asynchrony in ZK-close can lead to ZKRMStateStore watcher receiving
     events for old client. (Zhihai Xu via kasha)
 
     YARN-3227. Timeline renew delegation token fails when RM user's TGT is expired
@@ -1213,17 +1176,16 @@ Release 2.6.1 - 2015-09-23
     YARN-3055. Fixed ResourceManager's DelegationTokenRenewer to not stop token
     renewal of applications part of a bigger workflow. (Daryn Sharp via vinodkv)
 
-<<<<<<< HEAD
-    YARN-3493. RM fails to come up with error "Failed to load/recover state" 
+    YARN-3493. RM fails to come up with error "Failed to load/recover state"
     when mem settings are changed. (Jian He via wangda)
 
-    YARN-3487. CapacityScheduler scheduler lock obtained unnecessarily when 
+    YARN-3487. CapacityScheduler scheduler lock obtained unnecessarily when
     calling getQueue (Jason Lowe via wangda)
 
     YARN-3024. LocalizerRunner should give DIE action when all resources are
     localized. (Chengbing Liu via xgong)
 
-    YARN-3464. Race condition in LocalizerRunner kills localizer before 
+    YARN-3464. Race condition in LocalizerRunner kills localizer before
     localizing all resources. (Zhihai Xu via kasha)
 
     YARN-3641. NodeManager: stopRecoveryStore() shouldn't be skipped when
@@ -1296,10 +1258,9 @@ Release 2.6.1 - 2015-09-23
 
     YARN-3544. Got back AM logs link on the RM web UI for a completed app.
     (Xuan Gong via zjshen)
-=======
+
     YARN-3466. Fix RM nodes web page to sort by node HTTP-address, #containers
     and node-label column (Jason Lowe via wangda)
->>>>>>> 4c39825... Cherry-picked YARN-4287-Capacity Scheduler-Rack Locality improvement
 
 Release 2.6.0 - 2014-11-18
 
