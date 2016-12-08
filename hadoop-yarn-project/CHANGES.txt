@@ -666,9 +666,6 @@ Release 2.7.0 - 2015-04-20
     YARN-2924. Fixed RMAdminCLI to not convert node labels to lower case.
     (Wangda Tan via jianhe)
 
-    YARN-2917. Fixed potential deadlock when system.exit is called in AsyncDispatcher
-    (Rohith Sharmaks via jianhe)
-
     YARN-2243. Order of arguments for Preconditions.checkNotNull() is wrong in
     SchedulerApplicationAttempt ctor. (devaraj)
 
