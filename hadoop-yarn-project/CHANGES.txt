@@ -484,8 +484,6 @@ Release 2.7.0 - 2015-04-20
     YARN-3022. Expose Container resource information from NodeManager for
     monitoring (adhoot via ranter)
 
-    YARN-3075. NodeLabelsManager implementation to retrieve label to node
-
     YARN-3098. Created common QueueCapacities class in Capacity Scheduler to
     track capacities-by-labels of queues. (Wangda Tan via jianhe)
 
@@ -668,8 +666,6 @@ Release 2.7.0 - 2015-04-20
     YARN-2924. Fixed RMAdminCLI to not convert node labels to lower case.
     (Wangda Tan via jianhe)
 
-    YARN-2243. Order of arguments for Preconditions.checkNotNull() is wrong in
-
     YARN-2917. Fixed potential deadlock when system.exit is called in AsyncDispatcher
     (Rohith Sharmaks via jianhe)
 
@@ -690,8 +686,6 @@ Release 2.7.0 - 2015-04-20
     YARN-2944. InMemorySCMStore can not be instantiated with ReflectionUtils#newInstance.
     (Chris Trezzo via kasha)
 
-    YARN-2675. containersKilled metrics is not updated when the container is killed
-
     YARN-2964. RM prematurely cancels tokens for jobs that submit jobs (oozie)
     (Jian He via jlowe)
 
@@ -704,8 +698,6 @@ Release 2.7.0 - 2015-04-20
     (Junping Du via ozawa)
 
     YARN-2939. Fix new findbugs warnings in hadoop-yarn-common. (Li Lu via junping_du)
-
-    YARN-2940. Fix new findbugs warnings in rest of the hadoop-yarn components. (Li Lu
 
     YARN-2920. Changed CapacityScheduler to kill containers on nodes where
     node labels are changed. (Wangda Tan via jianhe)
@@ -827,8 +819,6 @@ Release 2.7.0 - 2015-04-20
     YARN-2809. Implement workaround for linux kernel panic when removing
     cgroup (Nathan Roberts via jlowe)
 
-    YARN-3160. Fix non-atomic operation on nodeUpdateQueue in RMNodeImpl.
-
     YARN-2246. Made the proxy tracking URL always be
     http(s)://proxy addr:port/proxy/<appId> to avoid duplicate sections. (Devaraj
     K via zjshen)
@@ -875,9 +865,6 @@ Release 2.7.0 - 2015-04-20
     YARN-3247. TestQueueMappings should use CapacityScheduler explicitly.
     (Zhihai Xu via ozawa)
 
-    YARN-3256. TestClientToAMTokens#testClientTokenRace is not running against
-    all Schedulers even when using ParameterizedSchedulerTestBase.
-
     YARN-3239. WebAppProxy does not support a final tracking url which has
     query fragments and params (Jian He via jlowe)
 
@@ -916,8 +903,6 @@ Release 2.7.0 - 2015-04-20
 
     YARN-3154. Added additional APIs in LogAggregationContext to avoid aggregating
     running logs of application when rolling is enabled. (Xuan Gong via vinodkv)
-
-    YARN-1453. [JDK8] Fix Javadoc errors caused by incorrect or illegal tags in
 
     YARN-3267. Timelineserver applies the ACL rules after applying the limit on
     the number of records (Chang Li via jeagles)
