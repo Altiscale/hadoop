@@ -68,6 +68,17 @@ Maven build goals:
 
  * Clean                     : mvn clean
  * Compile                   : mvn compile [-Pnative]
+
+Note that there is a Maven limitation that prevents "mvn compile" to complete successfully from the
+top-level, the hadoop-maven-plugins module needs to be build successfully once to allow the plugin
+descriptor to be generated and available while the plugin is used later on. The hadoop-maven-plugins
+module must be built at least once after each "clean", if only the "compile" phase is executed, i.e.
+"mvn clean compile" will always fail from the top-level. This is caused by the fact that the plugin
+descriptor is always only generated after the compile phase since 3.0 to allow Java 5 plugin annotations
+support to work. Below can be used to perform a clean compile from the top-level:
+
+    mvn clean && mvn -f hadoop-maven-plugins/pom.xml process-classes && mvn compile [-Pnative]
+
  * Run tests                 : mvn test [-Pnative]
  * Create JAR                : mvn package
  * Run findbugs              : mvn compile findbugs:findbugs
