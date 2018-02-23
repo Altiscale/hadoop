@@ -715,7 +715,7 @@ public class DFSOutputStream extends FSOutputSummer
           response.close();
           response.join();
         } catch (InterruptedException  e) {
-          DFSClient.LOG.warn("Caught exception ", e);
+          DFSClient.LOG.debug("Caught exception ", e);
         } finally {
           response = null;
         }
