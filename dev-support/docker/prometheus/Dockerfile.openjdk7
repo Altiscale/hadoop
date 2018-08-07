@@ -59,12 +59,12 @@ ENV HADOOP_PROTOC_PATH /opt/protobuf-2.5.0/bin/protoc
 ENV PATH $PATH:/opt/protobuf-2.5.0/bin
 
 # Install findbugs
-COPY findbugs-noUpdateChecks-3.0.1.tar.gz /opt
 RUN mkdir -p /opt/findbugs && \
+    wget --no-check-certificate http://prdownloads.sourceforge.net/findbugs/findbugs-3.0.1.tar.gz && \
     echo "d1063d77b2511f751b61a5f12b5524a3" > findbugs.tar.gz.md5 && \
-    md5sum -b /opt/findbugs-noUpdateChecks-3.0.1.tar.gz > findbugs_check.md5 && \
+    md5sum -b findbugs-3.0.1.tar.gz > findbugs_check.md5 && \
     md5sum -c findbugs_check.md5 && \
-    tar xzf /opt/findbugs-noUpdateChecks-3.0.1.tar.gz --strip-components 1 -C /opt/findbugs
+    tar xzf findbugs-3.0.1.tar.gz --strip-components 1 -C /opt/findbugs
 ENV FINDBUGS_HOME /opt/findbugs
 ENV PATH $PATH:$FINDBUGS_HOME
 
