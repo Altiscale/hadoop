@@ -1,0 +1,106 @@
+# 1) O/S part
+FROM docker-dev.artifactory.service.altiscale.com/prometheus-root-6.5.14-201602120407-42
+WORKDIR /root
+
+RUN groupadd -g 10001 jenkins-slave
+RUN useradd -u 10001 -g 10001 -ms /bin/bash jenkins-slave
+RUN mkdir -p /home/jenkins-slave/build
+RUN chown jenkins-slave:jenkins-slave /home/jenkins-slave/build
+ENV DOCKER_WORKSPACE /home/jenkins-slave/build
+
+# 2) install packages for hadoop compile
+# Install common dependencies for packages
+RUN yum clean all && \
+    rpm --rebuilddb && \
+    yum install -y java-1.8.0-openjdk-devel \
+    git \
+    cmake \
+    ant \
+    snappy \
+    snappy-devel \
+    fuse \
+    fuse-devel \
+    openssl-devel \
+    lzo-devel \
+    vcc-buildtools \
+    R \
+    scala \
+    wget
+
+# Install maven
+RUN mkdir -p /opt/apache-maven && \
+    curl -L -s -S \
+    http://apache.mirrors.tds.net/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz \
+    -o apache-maven-3.3.9-bin.tar.gz && \
+    curl -L -s -S \
+    http://www.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz.md5  \
+    -o apache-maven-3.3.9-bin.tar.gz.md5 && \
+    md5sum -b apache-maven-3.3.9-bin.tar.gz > check.md5 && \
+    md5sum -c check.md5 && \
+    tar xzf apache-maven-3.3.9-bin.tar.gz --strip-components 1 -C /opt/apache-maven
+ENV MAVEN_HOME /opt/apache-maven
+ENV M2_HOME /opt/apache-maven
+ENV PATH $PATH:/opt/apache-maven/bin
+
+
+# Install protobuf
+# NOTE) I installed protobuf-devel, however it installed version 2.3.0. Hadoop required 2.5.0
+RUN mkdir -p /opt/protobuf-2.5.0 && \
+    wget https://github.com/google/protobuf/releases/download/v2.5.0/protobuf-2.5.0.tar.bz2 && \
+    echo "a72001a9067a4c2c4e0e836d0f92ece4" > protobuf-2.5.0.tar.bz2.md5 && \
+    md5sum -b protobuf-2.5.0.tar.bz2 > protobuf_check.md5 && \
+    md5sum -c protobuf_check.md5 && \
+    tar xf protobuf-2.5.0.tar.bz2 && \
+    cd protobuf-2.5.0  && \
+    ./configure --prefix=/opt/protobuf-2.5.0 && \
+    make && \
+    make install
+ENV HADOOP_PROTOC_PATH /opt/protobuf-2.5.0/bin/protoc
+ENV PATH $PATH:/opt/protobuf-2.5.0/bin
+
+# Install findbugs
+COPY findbugs-noUpdateChecks-3.0.1.tar.gz /opt
+RUN mkdir -p /opt/findbugs && \
+    echo "d1063d77b2511f751b61a5f12b5524a3" > findbugs.tar.gz.md5 && \
+    md5sum -b /opt/findbugs-noUpdateChecks-3.0.1.tar.gz > findbugs_check.md5 && \
+    md5sum -c findbugs_check.md5 && \
+    tar xzf /opt/findbugs-noUpdateChecks-3.0.1.tar.gz --strip-components 1 -C /opt/findbugs
+ENV FINDBUGS_HOME /opt/findbugs
+ENV PATH $PATH:$FINDBUGS_HOME
+
+# NOTE: fpm will not install without ffi 1.9.18
+RUN gem install ffi -v 1.9.18
+
+RUN gem install fpm
+
+# Install apache-ant
+RUN mkdir -p /opt/apache-ant-1.8.4 && \
+    curl -s -S -O \
+    http://archive.apache.org/dist/ant/binaries/apache-ant-1.8.4-bin.tar.gz && \
+    tar xzf *apache-ant* --strip-components 1 -C /opt/apache-ant-1.8.4 && \
+    echo "export ANT_HOME=/opt/apache-ant-1.8.4" >> /etc/profile.d/apache-ant.sh && \
+    echo "export PATH=$PATH:$ANT_HOME/bin" >> /etc/profile.d/apache-ant.sh
+ENV ANT_HOME /opt/apache-ant-1.8.4
+ENV PATH $PATH:$ANT_HOME/bin
+
+# Install Forrest
+RUN mkdir -p /opt/apache-forrest-0.9 && \
+    curl -s -S -O \
+    http://archive.apache.org/dist/forrest/0.9/apache-forrest-0.9.tar.gz && \
+    tar xzf *forrest* --strip-components 1 -C /opt/apache-forrest-0.9 && \
+    chmod a+rwX -R /opt/apache-forrest-0.9/plugins && \
+    chmod a+rwX -R /opt/apache-forrest-0.9/build && \
+    echo "export FORREST_HOME=/opt/apache-forrest-0.9" >> /etc/profile.d/apache-forrest.sh && \
+    echo "export PATH=$FORREST_HOME/bin" >> /etc/profile.d/apache-forrest.sh
+ENV FORREST_HOME /opt/apache-forrest-0.9
+ENV PATH $PATH:$FORREST_HOME/bin
+
+# Change directory for TEZ
+RUN mkdir -p /.npm /.config /.cache /.local && \
+    chmod a+rwX -R /.npm /.config /.cache /.local
+
+# 3) Set the compile environment (configuration)
+# # Add environment
+ADD hadoop_build_env.sh /root/hadoop_build_env.sh
+RUN chmod a+rx /root/hadoop_build_env.sh
+RUN echo '/root/hadoop_build_env.sh' >> /root/.bashrc
