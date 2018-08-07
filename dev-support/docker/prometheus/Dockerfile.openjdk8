@@ -68,6 +68,12 @@ RUN mkdir -p /opt/findbugs && \
 ENV FINDBUGS_HOME /opt/findbugs
 ENV PATH $PATH:$FINDBUGS_HOME
 
+###
+# Everything past this point is either not needed for testing or breaks Yetus.
+# So tell Yetus not to read the rest of the file:
+# YETUS CUT HERE
+###
+
 # NOTE: fpm will not install without ffi 1.9.18
 RUN gem install ffi -v 1.9.18
 
