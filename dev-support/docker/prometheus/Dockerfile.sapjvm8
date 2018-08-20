@@ -12,8 +12,7 @@ ENV DOCKER_WORKSPACE /home/jenkins-slave/build
 # Install common dependencies for packages
 RUN yum clean all && \
     rpm --rebuilddb && \
-    yum install -y java-1.7.0-openjdk-devel \
-    git \
+    yum install -y git \
     cmake \
     ant \
     snappy \
@@ -25,7 +24,8 @@ RUN yum clean all && \
     vcc-buildtools \
     R \
     scala \
-    wget
+    wget \
+    sapjvm_8
 
 # Install maven
 RUN mkdir -p /opt/apache-maven && \
