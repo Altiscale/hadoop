@@ -25,7 +25,7 @@ RUN yum clean all && \
     R \
     scala \
     wget \
-    sapjvm_8
+    sapjvm_8-1.042-1.x86_64
 
 # Install maven
 RUN mkdir -p /opt/apache-maven && \
