@@ -901,6 +901,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
               + (HdfsConstants.LEASE_HARDLIMIT_PERIOD/1000) + " seconds.) "
               + "Closing all files being written ...", e);
           closeAllFilesBeingWritten(true);
+        } else if (e instanceof RemoteException) {
+          IOException ioe = ((RemoteException)e).unwrapRemoteException();
+          if (ioe instanceof InvalidToken) {
+            // no point in retrying this ever again, the token is not valid anymore
+            LOG.warn("Token invalid, unable to renew lease for client " + clientName + ". "
+                + "Closing all files being written ...", e);
+            closeAllFilesBeingWritten(true);
+          } else {
+            // Let the lease renewer handle it and retry.
+            throw e;
+          }
         } else {
           // Let the lease renewer handle it and retry.
           throw e;
