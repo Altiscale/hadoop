@@ -259,6 +259,6 @@ public class TestDtUtilShell {
     DataInputStream in = new DataInputStream(
         new FileInputStream(tokenFilenameGet));
     spyCreds.readTokenStorageStream(in);
-    Mockito.verify(spyCreds).readProto(in);
+    Mockito.verify(spyCreds).readFields(in);
   }
 }

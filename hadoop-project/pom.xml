@@ -96,6 +96,8 @@
     <enforced.maven.version>[3.0.2,)</enforced.maven.version>
 
     <!-- Plugin versions and config -->
+    <maven-surefire-plugin.useSystemClassLoader>true</maven-surefire-plugin.useSystemClassLoader>
+    <maven-surefire-plugin.useManifestOnlyJar>false</maven-surefire-plugin.useManifestOnlyJar>
     <maven-surefire-plugin.argLine>-Xmx4096m -XX:MaxPermSize=768m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
     <maven-surefire-plugin.version>2.17</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
@@ -374,7 +376,7 @@
         <artifactId>hadoop-openstack</artifactId>
         <version>${project.version}</version>
       </dependency>
-      
+
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-azure</artifactId>
@@ -547,7 +549,7 @@
         <artifactId>guice</artifactId>
         <version>3.0</version>
       </dependency>
-      
+
       <dependency>
         <groupId>cglib</groupId>
         <artifactId>cglib</artifactId>
@@ -961,7 +963,7 @@
         <artifactId>azure-storage</artifactId>
         <version>2.0.0</version>
     </dependency>
-      
+
     </dependencies>
   </dependencyManagement>
 
@@ -1184,6 +1186,8 @@
           <reuseForks>false</reuseForks>
           <forkedProcessTimeoutInSeconds>${surefire.fork.timeout}</forkedProcessTimeoutInSeconds>
           <argLine>${maven-surefire-plugin.argLine}</argLine>
+          <useSystemClassLoader>${maven-surefire-plugin.useSystemClassLoader}</useSystemClassLoader>
+          <useManifestOnlyJar>${maven-surefire-plugin.useManifestOnlyJar}</useManifestOnlyJar>
           <environmentVariables>
             <HADOOP_COMMON_HOME>${hadoop.common.build.dir}</HADOOP_COMMON_HOME>
             <!-- HADOOP_HOME required for tests on Windows to find winutils -->
