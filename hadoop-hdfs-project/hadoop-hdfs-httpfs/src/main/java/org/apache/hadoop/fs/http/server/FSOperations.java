@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.http.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AclException;
+import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.util.StringUtils;
@@ -182,15 +184,16 @@ public class FSOperations {
 
     /**
      * Return a Map suitable for conversion into JSON.
+     * @param isFile is the fileStatuses from a file path
      * @return A JSONish Map
      */
     @SuppressWarnings({"unchecked"})
-    public Map<String,Object> toJson() {
+    public Map<String,Object> toJson(boolean isFile) {
       Map<String,Object> json = new LinkedHashMap<String,Object>();
       Map<String,Object> inner = new LinkedHashMap<String,Object>();
       JSONArray statuses = new JSONArray();
       for (StatusPair s : statusPairs) {
-        statuses.add(s.toJsonInner(false));
+        statuses.add(s.toJsonInner(isFile));
       }
       inner.put(HttpFSFileSystem.FILE_STATUS_JSON, statuses);
       json.put(HttpFSFileSystem.FILE_STATUSES_JSON, inner);
@@ -233,7 +236,7 @@ public class FSOperations {
     Map json = new LinkedHashMap();
     json.put(HttpFSFileSystem.CHECKSUM_ALGORITHM_JSON, checksum.getAlgorithmName());
     json.put(HttpFSFileSystem.CHECKSUM_BYTES_JSON,
-             org.apache.hadoop.util.StringUtils.byteToHexString(checksum.getBytes()));
+            org.apache.hadoop.util.StringUtils.byteToHexString(checksum.getBytes()));
     json.put(HttpFSFileSystem.CHECKSUM_LENGTH_JSON, checksum.getLength());
     Map response = new LinkedHashMap();
     response.put(HttpFSFileSystem.FILE_CHECKSUM_JSON, json);
@@ -247,11 +250,11 @@ public class FSOperations {
    * @param encoding format of xattr values.
    *
    * @return The JSON representation of the xAttrs.
-   * @throws IOException 
+   * @throws IOException
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
-  private static Map xAttrsToJSON(Map<String, byte[]> xAttrs, 
-      XAttrCodec encoding) throws IOException {
+  private static Map xAttrsToJSON(Map<String, byte[]> xAttrs,
+                                  XAttrCodec encoding) throws IOException {
     Map jsonMap = new LinkedHashMap();
     JSONArray jsonArray = new JSONArray();
     if (xAttrs != null) {
@@ -259,8 +262,8 @@ public class FSOperations {
         Map json = new LinkedHashMap();
         json.put(HttpFSFileSystem.XATTR_NAME_JSON, e.getKey());
         if (e.getValue() != null) {
-          json.put(HttpFSFileSystem.XATTR_VALUE_JSON, 
-              XAttrCodec.encodeValue(e.getValue(), encoding));
+          json.put(HttpFSFileSystem.XATTR_VALUE_JSON,
+                  XAttrCodec.encodeValue(e.getValue(), encoding));
         }
         jsonArray.add(json);
       }
@@ -275,7 +278,7 @@ public class FSOperations {
    * @param names file xAttr names.
    *
    * @return The JSON representation of the xAttr names.
-   * @throws IOException 
+   * @throws IOException
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private static Map xAttrNamesToJSON(List<String> names) throws IOException {
@@ -408,8 +411,8 @@ public class FSOperations {
    * Executor that performs a truncate FileSystemAccess files system operation.
    */
   @InterfaceAudience.Private
-  public static class FSTruncate implements 
-      FileSystemAccess.FileSystemExecutor<JSONObject> {
+  public static class FSTruncate implements
+          FileSystemAccess.FileSystemExecutor<JSONObject> {
     private Path path;
     private long newLength;
 
@@ -430,9 +433,9 @@ public class FSOperations {
      * @param fs filesystem instance to use.
      *
      * @return <code>true</code> if the file has been truncated to the desired,
-     *         <code>false</code> if a background process of adjusting the 
-     *         length of the last block has been started, and clients should 
-     *         wait for it to complete before proceeding with further file 
+     *         <code>false</code> if a background process of adjusting the
+     *         length of the last block has been started, and clients should
+     *         wait for it to complete before proceeding with further file
      *         updates.
      *
      * @throws IOException thrown if an IO error occured.
@@ -441,7 +444,7 @@ public class FSOperations {
     public JSONObject execute(FileSystem fs) throws IOException {
       boolean result = fs.truncate(path, newLength);
       return toJSON(
-          StringUtils.toLowerCase(HttpFSFileSystem.TRUNCATE_JSON), result);
+              StringUtils.toLowerCase(HttpFSFileSystem.TRUNCATE_JSON), result);
     }
 
   }
@@ -571,7 +574,7 @@ public class FSOperations {
     public JSONObject execute(FileSystem fs) throws IOException {
       boolean deleted = fs.delete(path, recursive);
       return toJSON(
-          StringUtils.toLowerCase(HttpFSFileSystem.DELETE_JSON), deleted);
+              StringUtils.toLowerCase(HttpFSFileSystem.DELETE_JSON), deleted);
     }
 
   }
@@ -704,7 +707,7 @@ public class FSOperations {
     @Override
     public Map execute(FileSystem fs) throws IOException {
       StatusPairs sp = new StatusPairs(fs, path, filter);
-      return sp.toJson();
+      return sp.toJson(fs.getFileStatus(path).isFile());
     }
 
     @Override
@@ -1195,16 +1198,16 @@ public class FSOperations {
    * Executor that performs a setxattr FileSystemAccess files system operation.
    */
   @InterfaceAudience.Private
-  public static class FSSetXAttr implements 
-      FileSystemAccess.FileSystemExecutor<Void> {
+  public static class FSSetXAttr implements
+          FileSystemAccess.FileSystemExecutor<Void> {
 
     private Path path;
     private String name;
     private byte[] value;
     private EnumSet<XAttrSetFlag> flag;
 
-    public FSSetXAttr(String path, String name, String encodedValue, 
-        EnumSet<XAttrSetFlag> flag) throws IOException {
+    public FSSetXAttr(String path, String name, String encodedValue,
+                      EnumSet<XAttrSetFlag> flag) throws IOException {
       this.path = new Path(path);
       this.name = name;
       this.value = XAttrCodec.decodeValue(encodedValue);
@@ -1219,12 +1222,12 @@ public class FSOperations {
   }
 
   /**
-   * Executor that performs a removexattr FileSystemAccess files system 
+   * Executor that performs a removexattr FileSystemAccess files system
    * operation.
    */
   @InterfaceAudience.Private
-  public static class FSRemoveXAttr implements 
-      FileSystemAccess.FileSystemExecutor<Void> {
+  public static class FSRemoveXAttr implements
+          FileSystemAccess.FileSystemExecutor<Void> {
 
     private Path path;
     private String name;
@@ -1242,13 +1245,13 @@ public class FSOperations {
   }
 
   /**
-   * Executor that performs listing xattrs FileSystemAccess files system 
+   * Executor that performs listing xattrs FileSystemAccess files system
    * operation.
    */
   @SuppressWarnings("rawtypes")
   @InterfaceAudience.Private
-  public static class FSListXAttrs implements 
-      FileSystemAccess.FileSystemExecutor<Map> {
+  public static class FSListXAttrs implements
+          FileSystemAccess.FileSystemExecutor<Map> {
     private Path path;
 
     /**
@@ -1277,13 +1280,13 @@ public class FSOperations {
   }
 
   /**
-   * Executor that performs getting xattrs FileSystemAccess files system 
+   * Executor that performs getting xattrs FileSystemAccess files system
    * operation.
    */
   @SuppressWarnings("rawtypes")
   @InterfaceAudience.Private
-  public static class FSGetXAttrs implements 
-      FileSystemAccess.FileSystemExecutor<Map> {
+  public static class FSGetXAttrs implements
+          FileSystemAccess.FileSystemExecutor<Map> {
     private Path path;
     private List<String> names;
     private XAttrCodec encoding;
@@ -1317,6 +1320,41 @@ public class FSOperations {
         xattrs = fs.getXAttrs(path);
       }
       return xAttrsToJSON(xattrs, encoding);
+    }
+  }
+
+  /**
+   * Executor that performs a getFileBlockLocations FileSystemAccess
+   * file system operation.
+   */
+  @InterfaceAudience.Private
+  @SuppressWarnings("rawtypes")
+  public static class FSFileBlockLocations implements
+          FileSystemAccess.FileSystemExecutor<Map> {
+    private Path path;
+    private long offsetValue;
+    private long lengthValue;
+
+    /**
+     * Creates a file-block-locations executor.
+     *
+     * @param path the path to retrieve the location
+     * @param offsetValue offset into the given file
+     * @param lengthValue length for which to get locations for
+     */
+    public FSFileBlockLocations(String path, long offsetValue,
+                                long lengthValue) {
+      this.path = new Path(path);
+      this.offsetValue = offsetValue;
+      this.lengthValue = lengthValue;
+    }
+
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      BlockLocation[] locations =
+              fs.getFileBlockLocations(this.path, this.offsetValue,
+                      this.lengthValue);
+      return JsonUtil.toJsonMap(locations);
     }
   }
 }

@@ -48,54 +48,62 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PA
 public class HttpFSParametersProvider extends ParametersProvider {
 
   private static final Map<Enum, Class<Param<?>>[]> PARAMS_DEF =
-    new HashMap<Enum, Class<Param<?>>[]>();
+          new HashMap<Enum, Class<Param<?>>[]>();
 
   static {
     PARAMS_DEF.put(Operation.OPEN,
-        new Class[]{OffsetParam.class, LenParam.class});
+            new Class[]{OffsetParam.class, LenParam.class});
     PARAMS_DEF.put(Operation.GETFILESTATUS, new Class[]{});
     PARAMS_DEF.put(Operation.LISTSTATUS, new Class[]{FilterParam.class});
     PARAMS_DEF.put(Operation.GETHOMEDIRECTORY, new Class[]{});
     PARAMS_DEF.put(Operation.GETCONTENTSUMMARY, new Class[]{});
     PARAMS_DEF.put(Operation.GETFILECHECKSUM, new Class[]{});
-    PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS, new Class[]{});
+    PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS,
+            new Class[] {OffsetParam.class, LenParam.class});
     PARAMS_DEF.put(Operation.GETACLSTATUS, new Class[]{});
     PARAMS_DEF.put(Operation.INSTRUMENTATION, new Class[]{});
     PARAMS_DEF.put(Operation.APPEND, new Class[]{DataParam.class});
     PARAMS_DEF.put(Operation.CONCAT, new Class[]{SourcesParam.class});
     PARAMS_DEF.put(Operation.TRUNCATE, new Class[]{NewLengthParam.class});
     PARAMS_DEF.put(Operation.CREATE,
-      new Class[]{PermissionParam.class, OverwriteParam.class,
-                  ReplicationParam.class, BlockSizeParam.class, DataParam.class});
+            new Class[]{PermissionParam.class, OverwriteParam.class,
+                    ReplicationParam.class, BlockSizeParam.class, DataParam.class});
     PARAMS_DEF.put(Operation.MKDIRS, new Class[]{PermissionParam.class});
     PARAMS_DEF.put(Operation.RENAME, new Class[]{DestinationParam.class});
     PARAMS_DEF.put(Operation.SETOWNER,
-        new Class[]{OwnerParam.class, GroupParam.class});
+            new Class[]{OwnerParam.class, GroupParam.class});
     PARAMS_DEF.put(Operation.SETPERMISSION, new Class[]{PermissionParam.class});
     PARAMS_DEF.put(Operation.SETREPLICATION,
-        new Class[]{ReplicationParam.class});
+            new Class[]{ReplicationParam.class});
     PARAMS_DEF.put(Operation.SETTIMES,
-        new Class[]{ModifiedTimeParam.class, AccessTimeParam.class});
+            new Class[]{ModifiedTimeParam.class, AccessTimeParam.class});
     PARAMS_DEF.put(Operation.DELETE, new Class[]{RecursiveParam.class});
     PARAMS_DEF.put(Operation.SETACL, new Class[]{AclPermissionParam.class});
     PARAMS_DEF.put(Operation.REMOVEACL, new Class[]{});
     PARAMS_DEF.put(Operation.MODIFYACLENTRIES,
-        new Class[]{AclPermissionParam.class});
+            new Class[]{AclPermissionParam.class});
     PARAMS_DEF.put(Operation.REMOVEACLENTRIES,
-        new Class[]{AclPermissionParam.class});
+            new Class[]{AclPermissionParam.class});
     PARAMS_DEF.put(Operation.REMOVEDEFAULTACL, new Class[]{});
     PARAMS_DEF.put(Operation.SETXATTR,
-        new Class[]{XAttrNameParam.class, XAttrValueParam.class,
-                  XAttrSetFlagParam.class});
+            new Class[]{XAttrNameParam.class, XAttrValueParam.class,
+                    XAttrSetFlagParam.class});
     PARAMS_DEF.put(Operation.REMOVEXATTR, new Class[]{XAttrNameParam.class});
-    PARAMS_DEF.put(Operation.GETXATTRS, 
-        new Class[]{XAttrNameParam.class, XAttrEncodingParam.class});
+    PARAMS_DEF.put(Operation.GETXATTRS,
+            new Class[]{XAttrNameParam.class, XAttrEncodingParam.class});
     PARAMS_DEF.put(Operation.LISTXATTRS, new Class[]{});
+    PARAMS_DEF.put(Operation.LISTSTATUS_BATCH,
+            new Class[]{StartAfterParam.class});
+//    PARAMS_DEF.put(Operation.GETALLSTORAGEPOLICY, new Class[] {});
+//    PARAMS_DEF.put(Operation.GETSTORAGEPOLICY, new Class[] {});
+//    PARAMS_DEF.put(Operation.SETSTORAGEPOLICY,
+//            new Class[] {PolicyNameParam.class});
+//    PARAMS_DEF.put(Operation.UNSETSTORAGEPOLICY, new Class[] {});
   }
 
   public HttpFSParametersProvider() {
     super(HttpFSFileSystem.OP_PARAM, HttpFSFileSystem.Operation.class,
-          PARAMS_DEF);
+            PARAMS_DEF);
   }
 
   /**
@@ -169,8 +177,8 @@ public class HttpFSParametersProvider extends ParametersProvider {
      */
     public OperationParam(String operation) {
       super(NAME, HttpFSFileSystem.Operation.class,
-            HttpFSFileSystem.Operation.valueOf(
-                StringUtils.toUpperCase(operation)));
+              HttpFSFileSystem.Operation.valueOf(
+                      StringUtils.toUpperCase(operation)));
     }
   }
 
@@ -445,14 +453,14 @@ public class HttpFSParametersProvider extends ParametersProvider {
       super(NAME, null);
     }
   }
-  
+
   /**
    * Class for xattr parameter.
    */
   @InterfaceAudience.Private
   public static class XAttrNameParam extends StringParam {
-    public static final String XATTR_NAME_REGX = 
-        "^(user\\.|trusted\\.|system\\.|security\\.).+";
+    public static final String XATTR_NAME_REGX =
+            "^(user\\.|trusted\\.|system\\.|security\\.).+";
     /**
      * Parameter name.
      */
@@ -518,6 +526,42 @@ public class HttpFSParametersProvider extends ParametersProvider {
      */
     public XAttrEncodingParam() {
       super(NAME, XAttrCodec.class, null);
+    }
+  }
+
+  /**
+   * Class for startafter parameter.
+   */
+  @InterfaceAudience.Private
+  public static class StartAfterParam extends StringParam {
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.START_AFTER_PARAM;
+
+    /**
+     * Constructor.
+     */
+    public StartAfterParam() {
+      super(NAME, null);
+    }
+  }
+
+  /**
+   * Class for policyName parameter.
+   */
+  @InterfaceAudience.Private
+  public static class PolicyNameParam extends StringParam {
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = HttpFSFileSystem.POLICY_NAME_PARAM;
+
+    /**
+     * Constructor.
+     */
+    public PolicyNameParam() {
+      super(NAME, null);
     }
   }
 }
