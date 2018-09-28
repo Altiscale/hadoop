@@ -152,7 +152,7 @@ public class HttpFSServer {
     if (!path.equals("/")) {
       throw new UnsupportedOperationException(
         MessageFormat.format("Operation [{0}], invalid path [{1}], must be '/'",
-                                   op, path));
+                             op, path));
     }
   }
 
@@ -235,7 +235,7 @@ public class HttpFSServer {
         Long offset = params.get(OffsetParam.NAME, OffsetParam.class);
         Long len = params.get(LenParam.NAME, LenParam.class);
         AUDIT_LOG.info("[{}] offset [{}] len [{}]",
-                       new Object[] {path, offset, len});
+                       new Object[]{path, offset, len});
         InputStreamEntity entity = new InputStreamEntity(is, offset, len);
         response =
           Response.ok(entity).type(MediaType.APPLICATION_OCTET_STREAM).build();
@@ -275,7 +275,7 @@ public class HttpFSServer {
             "User not in HttpFSServer admin group");
         }
         Instrumentation instrumentation =
-                HttpFSServerWebApp.get().get(Instrumentation.class);
+          HttpFSServerWebApp.get().get(Instrumentation.class);
         Map snapshot = instrumentation.getSnapshot();
         response = Response.ok(snapshot).build();
         break;
@@ -352,8 +352,8 @@ public class HttpFSServer {
 
       default: {
         throw new IOException(
-                MessageFormat.format("Invalid HTTP GET operation [{0}]",
-                                     op.value()));
+          MessageFormat.format("Invalid HTTP GET operation [{0}]",
+                               op.value()));
       }
     }
     return response;
@@ -401,8 +401,8 @@ public class HttpFSServer {
       }
       default: {
         throw new IOException(
-                MessageFormat.format("Invalid HTTP DELETE operation [{0}]",
-                                     op.value()));
+          MessageFormat.format("Invalid HTTP DELETE operation [{0}]",
+                               op.value()));
       }
     }
     return response;
@@ -471,7 +471,7 @@ public class HttpFSServer {
       }
       case TRUNCATE: {
         Long newLength = params.get(NewLengthParam.NAME, NewLengthParam.class);
-        FSOperations.FSTruncate command =
+        FSOperations.FSTruncate command = 
             new FSOperations.FSTruncate(path, newLength);
         JSONObject json = fsExecute(user, command);
         AUDIT_LOG.info("Truncate [{}] to length [{}]", path, newLength);
@@ -480,8 +480,8 @@ public class HttpFSServer {
       }
       default: {
         throw new IOException(
-                MessageFormat.format("Invalid HTTP POST operation [{0}]",
-                                     op.value()));
+          MessageFormat.format("Invalid HTTP POST operation [{0}]",
+                               op.value()));
       }
     }
     return response;
@@ -551,7 +551,7 @@ public class HttpFSServer {
           Short replication = params.get(ReplicationParam.NAME,
                                          ReplicationParam.class);
           Long blockSize = params.get(BlockSizeParam.NAME,
-                  BlockSizeParam.class);
+                                      BlockSizeParam.class);
           FSOperations.FSCreate command =
             new FSOperations.FSCreate(is, path, permission, override,
                                       replication, blockSize);
@@ -628,7 +628,7 @@ public class HttpFSServer {
       }
       case SETREPLICATION: {
         Short replication = params.get(ReplicationParam.NAME,
-                ReplicationParam.class);
+                                       ReplicationParam.class);
         FSOperations.FSSetReplication command =
           new FSOperations.FSSetReplication(path, replication);
         JSONObject json = fsExecute(user, command);
@@ -645,7 +645,7 @@ public class HttpFSServer {
           new FSOperations.FSSetTimes(path, modifiedTime, accessTime);
         fsExecute(user, command);
         AUDIT_LOG.info("[{}] to (M/A)[{}]", path,
-                modifiedTime + ":" + accessTime);
+                       modifiedTime + ":" + accessTime);
         response = Response.ok().build();
         break;
       }
@@ -698,7 +698,7 @@ public class HttpFSServer {
       default: {
         throw new IOException(
           MessageFormat.format("Invalid HTTP PUT operation [{0}]",
-                                     op.value()));
+                               op.value()));
       }
     }
     return response;

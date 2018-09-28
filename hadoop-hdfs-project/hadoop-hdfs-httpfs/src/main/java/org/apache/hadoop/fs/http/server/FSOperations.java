@@ -433,9 +433,9 @@ public class FSOperations {
      * @param fs filesystem instance to use.
      *
      * @return <code>true</code> if the file has been truncated to the desired,
-     *         <code>false</code> if a background process of adjusting the
-     *         length of the last block has been started, and clients should
-     *         wait for it to complete before proceeding with further file
+     *         <code>false</code> if a background process of adjusting the 
+     *         length of the last block has been started, and clients should 
+     *         wait for it to complete before proceeding with further file 
      *         updates.
      *
      * @throws IOException thrown if an IO error occured.
@@ -1206,7 +1206,7 @@ public class FSOperations {
     private byte[] value;
     private EnumSet<XAttrSetFlag> flag;
 
-    public FSSetXAttr(String path, String name, String encodedValue,
+    public FSSetXAttr(String path, String name, String encodedValue, 
         EnumSet<XAttrSetFlag> flag) throws IOException {
       this.path = new Path(path);
       this.name = name;
@@ -1250,7 +1250,7 @@ public class FSOperations {
    */
   @SuppressWarnings("rawtypes")
   @InterfaceAudience.Private
-  public static class FSListXAttrs implements
+  public static class FSListXAttrs implements 
           FileSystemAccess.FileSystemExecutor<Map> {
     private Path path;
 

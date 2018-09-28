@@ -237,7 +237,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs.mkdirs(getProxiedFSTestDir());
       Path file = new Path(getProxiedFSTestDir(), "foo.txt");
       final byte[] data = FileSystemTestHelper.getFileData(
-              numOfBlocks, blockSize);
+          numOfBlocks, blockSize);
       FileSystemTestHelper.createFile(fs, file, data, blockSize, repl);
 
       final int newLength = blockSize;
@@ -529,6 +529,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertEquals(httpContentSummary.getSpaceQuota(), hdfsContentSummary.getSpaceQuota());
   }
 
+
   /** Set xattr */
   private void testSetXAttr() throws Exception {
     if (!isLocalFS()) {
@@ -539,7 +540,6 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       os.write(1);
       os.close();
       fs.close();
-
 
       final String name1 = "user.a1";
       final byte[] value1 = new byte[]{0x31, 0x32, 0x33};

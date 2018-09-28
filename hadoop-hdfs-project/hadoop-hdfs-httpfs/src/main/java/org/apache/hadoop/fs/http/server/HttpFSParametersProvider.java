@@ -94,11 +94,6 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.LISTXATTRS, new Class[]{});
     PARAMS_DEF.put(Operation.LISTSTATUS_BATCH,
             new Class[]{StartAfterParam.class});
-//    PARAMS_DEF.put(Operation.GETALLSTORAGEPOLICY, new Class[] {});
-//    PARAMS_DEF.put(Operation.GETSTORAGEPOLICY, new Class[] {});
-//    PARAMS_DEF.put(Operation.SETSTORAGEPOLICY,
-//            new Class[] {PolicyNameParam.class});
-//    PARAMS_DEF.put(Operation.UNSETSTORAGEPOLICY, new Class[] {});
   }
 
   public HttpFSParametersProvider() {
@@ -459,7 +454,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
    */
   @InterfaceAudience.Private
   public static class XAttrNameParam extends StringParam {
-    public static final String XATTR_NAME_REGX =
+    public static final String XATTR_NAME_REGX = 
         "^(user\\.|trusted\\.|system\\.|security\\.).+";
     /**
      * Parameter name.
