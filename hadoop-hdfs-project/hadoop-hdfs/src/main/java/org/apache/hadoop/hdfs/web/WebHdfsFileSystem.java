@@ -18,12 +18,7 @@ res * Licensed to the Apache Software Foundation (ASF) under one
 
 package org.apache.hadoop.hdfs.web;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.EOFException;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
@@ -1431,13 +1426,12 @@ public class WebHdfsFileSystem extends FileSystem
       final long offset, final long length) throws IOException {
     statistics.incrementReadOps(1);
 
-    final HttpOpParam.Op op = GetOpParam.Op.GET_BLOCK_LOCATIONS;
+    final HttpOpParam.Op op = GetOpParam.Op.GETFILEBLOCKLOCATIONS;
     return new FsPathResponseRunner<BlockLocation[]>(op, p,
         new OffsetParam(offset), new LengthParam(length)) {
       @Override
       BlockLocation[] decodeResponse(Map<?,?> json) throws IOException {
-        return DFSUtil.locatedBlocks2Locations(
-            JsonUtil.toLocatedBlocks(json));
+        return JsonUtil.toBlockLocationArray(json);
       }
     }.run();
   }

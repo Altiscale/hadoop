@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.http.server;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.protocol.AclException;
+import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.util.StringUtils;
@@ -182,15 +184,16 @@ public class FSOperations {
 
     /**
      * Return a Map suitable for conversion into JSON.
+     * @param isFile is the fileStatuses from a file path
      * @return A JSONish Map
      */
     @SuppressWarnings({"unchecked"})
-    public Map<String,Object> toJson() {
+    public Map<String,Object> toJson(boolean isFile) {
       Map<String,Object> json = new LinkedHashMap<String,Object>();
       Map<String,Object> inner = new LinkedHashMap<String,Object>();
       JSONArray statuses = new JSONArray();
       for (StatusPair s : statusPairs) {
-        statuses.add(s.toJsonInner(false));
+        statuses.add(s.toJsonInner(isFile));
       }
       inner.put(HttpFSFileSystem.FILE_STATUS_JSON, statuses);
       json.put(HttpFSFileSystem.FILE_STATUSES_JSON, inner);
@@ -704,7 +707,7 @@ public class FSOperations {
     @Override
     public Map execute(FileSystem fs) throws IOException {
       StatusPairs sp = new StatusPairs(fs, path, filter);
-      return sp.toJson();
+      return sp.toJson(fs.getFileStatus(path).isFile());
     }
 
     @Override
@@ -1248,7 +1251,7 @@ public class FSOperations {
   @SuppressWarnings("rawtypes")
   @InterfaceAudience.Private
   public static class FSListXAttrs implements 
-      FileSystemAccess.FileSystemExecutor<Map> {
+          FileSystemAccess.FileSystemExecutor<Map> {
     private Path path;
 
     /**
@@ -1317,6 +1320,41 @@ public class FSOperations {
         xattrs = fs.getXAttrs(path);
       }
       return xAttrsToJSON(xattrs, encoding);
+    }
+  }
+
+  /**
+   * Executor that performs a getFileBlockLocations FileSystemAccess
+   * file system operation.
+   */
+  @InterfaceAudience.Private
+  @SuppressWarnings("rawtypes")
+  public static class FSFileBlockLocations implements
+          FileSystemAccess.FileSystemExecutor<Map> {
+    private Path path;
+    private long offsetValue;
+    private long lengthValue;
+
+    /**
+     * Creates a file-block-locations executor.
+     *
+     * @param path the path to retrieve the location
+     * @param offsetValue offset into the given file
+     * @param lengthValue length for which to get locations for
+     */
+    public FSFileBlockLocations(String path, long offsetValue,
+                                long lengthValue) {
+      this.path = new Path(path);
+      this.offsetValue = offsetValue;
+      this.lengthValue = lengthValue;
+    }
+
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      BlockLocation[] locations =
+              fs.getFileBlockLocations(this.path, this.offsetValue,
+                      this.lengthValue);
+      return JsonUtil.toJsonMap(locations);
     }
   }
 }

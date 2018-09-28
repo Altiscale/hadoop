@@ -34,7 +34,8 @@ public class GetOpParam extends HttpOpParam<GetOpParam.Op> {
     GETDELEGATIONTOKEN(false, HttpURLConnection.HTTP_OK, true),
 
     /** GET_BLOCK_LOCATIONS is a private unstable op. */
-    GET_BLOCK_LOCATIONS(false, HttpURLConnection.HTTP_OK),
+    /*GET_BLOCK_LOCATIONS(false, HttpURLConnection.HTTP_OK),*/
+    GETFILEBLOCKLOCATIONS(false, HttpURLConnection.HTTP_OK),
     GETACLSTATUS(false, HttpURLConnection.HTTP_OK),
     GETXATTRS(false, HttpURLConnection.HTTP_OK),
     LISTXATTRS(false, HttpURLConnection.HTTP_OK),

@@ -18,10 +18,16 @@
 package org.apache.hadoop.fs.http.client;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.MapType;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.DelegationTokenRenewer;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -32,12 +38,15 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -110,6 +119,10 @@ public class HttpFSFileSystem extends FileSystem
   public static final String XATTR_SET_FLAG_PARAM = "flag";
   public static final String XATTR_ENCODING_PARAM = "encoding";
   public static final String NEW_LENGTH_PARAM = "newlength";
+  public static final String START_AFTER_PARAM = "startAfter";
+  public static final String POLICY_NAME_PARAM = "storagepolicy";
+  public static final String OFFSET_PARAM = "offset";
+  public static final String LENGTH_PARAM = "length";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -123,6 +136,8 @@ public class HttpFSFileSystem extends FileSystem
   public static final String MKDIRS_JSON = "boolean";
 
   public static final String HOME_DIR_JSON = "Path";
+
+  public static final String TRASH_DIR_JSON = "Path";
 
   public static final String SET_REPLICATION_JSON = "boolean";
 
@@ -181,6 +196,16 @@ public class HttpFSFileSystem extends FileSystem
   public static final String ACL_ENTRIES_JSON = "entries";
   public static final String ACL_BIT_JSON = "aclBit";
 
+  public static final String ENC_BIT_JSON = "encBit";
+
+  public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
+  public static final String PARTIAL_LISTING_JSON = "partialListing";
+  public static final String REMAINING_ENTRIES_JSON = "remainingEntries";
+
+  public static final String STORAGE_POLICIES_JSON = "BlockStoragePolicies";
+  public static final String STORAGE_POLICY_JSON = "BlockStoragePolicy";
+  public static final String BLOCK_LOCATIONS_JSON = "BlockLocations";
+
   public static final int HTTP_TEMPORARY_REDIRECT = 307;
 
   private static final String HTTP_GET = "GET";
@@ -193,14 +218,16 @@ public class HttpFSFileSystem extends FileSystem
     OPEN(HTTP_GET), GETFILESTATUS(HTTP_GET), LISTSTATUS(HTTP_GET),
     GETHOMEDIRECTORY(HTTP_GET), GETCONTENTSUMMARY(HTTP_GET),
     GETFILECHECKSUM(HTTP_GET),  GETFILEBLOCKLOCATIONS(HTTP_GET),
-    INSTRUMENTATION(HTTP_GET), GETACLSTATUS(HTTP_GET),
+    INSTRUMENTATION(HTTP_GET), GETACLSTATUS(HTTP_GET), GETTRASHROOT(HTTP_GET),
     APPEND(HTTP_POST), CONCAT(HTTP_POST), TRUNCATE(HTTP_POST),
     CREATE(HTTP_PUT), MKDIRS(HTTP_PUT), RENAME(HTTP_PUT), SETOWNER(HTTP_PUT),
     SETPERMISSION(HTTP_PUT), SETREPLICATION(HTTP_PUT), SETTIMES(HTTP_PUT),
     MODIFYACLENTRIES(HTTP_PUT), REMOVEACLENTRIES(HTTP_PUT),
     REMOVEDEFAULTACL(HTTP_PUT), REMOVEACL(HTTP_PUT), SETACL(HTTP_PUT),
     DELETE(HTTP_DELETE), SETXATTR(HTTP_PUT), GETXATTRS(HTTP_GET),
-    REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET);
+    REMOVEXATTR(HTTP_PUT), LISTXATTRS(HTTP_GET), LISTSTATUS_BATCH(HTTP_GET),
+    GETALLSTORAGEPOLICY(HTTP_GET), GETSTORAGEPOLICY(HTTP_GET),
+    SETSTORAGEPOLICY(HTTP_PUT), UNSETSTORAGEPOLICY(HTTP_POST);
 
     private String httpMethod;
 
@@ -238,7 +265,7 @@ public class HttpFSFileSystem extends FileSystem
    * @return a <code>HttpURLConnection</code> for the HttpFSServer server,
    *         authenticated and ready to use for the specified path and file system operation.
    *
-   * @throws IOException thrown if an IO error occurrs.
+   * @throws IOException thrown if an IO error occurs.
    */
   private HttpURLConnection getConnection(final String method,
       Map<String, String> params, Path path, boolean makeQualified)
@@ -263,7 +290,7 @@ public class HttpFSFileSystem extends FileSystem
    *         HttpFSServer server, authenticated and ready to use for the
    *         specified path and file system operation.
    *
-   * @throws IOException thrown if an IO error occurrs.
+   * @throws IOException thrown if an IO error occurs.
    */
   private HttpURLConnection getConnection(final String method,
       Map<String, String> params, Map<String, List<String>> multiValuedParams,
@@ -301,7 +328,7 @@ public class HttpFSFileSystem extends FileSystem
    * @return a <code>HttpURLConnection</code> for the HttpFSServer server, authenticated and ready to use for
    *         the specified path and file system operation.
    *
-   * @throws IOException thrown if an IO error occurrs.
+   * @throws IOException thrown if an IO error occurs.
    */
   private HttpURLConnection getConnection(URL url, String method) throws IOException {
     try {
@@ -447,7 +474,7 @@ public class HttpFSFileSystem extends FileSystem
     private int closeStatus;
 
     public HttpFSDataOutputStream(HttpURLConnection conn, OutputStream out, int closeStatus, Statistics stats)
-      throws IOException {
+            throws IOException {
       super(out, stats);
       this.conn = conn;
       this.closeStatus = closeStatus;
@@ -503,8 +530,8 @@ public class HttpFSFileSystem extends FileSystem
         }
       } else {
         throw new IOException(
-          MessageFormat.format("Expected HTTP status was [307], received [{0}]",
-                               conn.getResponseCode()));
+                MessageFormat.format("Expected HTTP status was [307], received [{0}]",
+                                     conn.getResponseCode()));
       }
     } catch (IOException ex) {
       if (exceptionAlreadyHandled) {
@@ -573,7 +600,7 @@ public class HttpFSFileSystem extends FileSystem
 
   /**
    * Truncate a file.
-   * 
+   *
    * @param f the file to be truncated.
    * @param newLength The size the file is to be truncated to.
    *
@@ -664,6 +691,17 @@ public class HttpFSFileSystem extends FileSystem
     return (Boolean) json.get(DELETE_JSON);
   }
 
+  private FileStatus[] toFileStatuses(JSONObject json, Path f) {
+    json = (JSONObject) json.get(FILE_STATUSES_JSON);
+    JSONArray jsonArray = (JSONArray) json.get(FILE_STATUS_JSON);
+    FileStatus[] array = new FileStatus[jsonArray.size()];
+    f = makeQualified(f);
+    for (int i = 0; i < jsonArray.size(); i++) {
+      array[i] = createFileStatus(f, (JSONObject) jsonArray.get(i));
+    }
+    return array;
+  }
+
   /**
    * List the statuses of the files/directories in the given path if the path is
    * a directory.
@@ -682,14 +720,7 @@ public class HttpFSFileSystem extends FileSystem
                                            params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
-    json = (JSONObject) json.get(FILE_STATUSES_JSON);
-    JSONArray jsonArray = (JSONArray) json.get(FILE_STATUS_JSON);
-    FileStatus[] array = new FileStatus[jsonArray.size()];
-    f = makeQualified(f);
-    for (int i = 0; i < jsonArray.size(); i++) {
-      array[i] = createFileStatus(f, (JSONObject) jsonArray.get(i));
-    }
-    return array;
+    return toFileStatuses(json, f);
   }
 
   /**
@@ -956,6 +987,21 @@ public class HttpFSFileSystem extends FileSystem
     return createAclStatus(json);
   }
 
+  /** Convert a string to a FsPermission object. */
+  static FsPermission toFsPermission(JSONObject json) {
+    final String s = (String) json.get(PERMISSION_JSON);
+    final Boolean aclBit = (Boolean) json.get(ACL_BIT_JSON);
+    final Boolean encBit = (Boolean) json.get(ENC_BIT_JSON);
+    FsPermission perm = new FsPermission(Short.parseShort(s, 8));
+    final boolean aBit = (aclBit != null) ? aclBit : false;
+    final boolean eBit = (encBit != null) ? encBit : false;
+    if (aBit || eBit) {
+      return new FsPermissionExtension(perm, aBit, eBit);
+    } else {
+      return perm;
+    }
+  }
+
   private FileStatus createFileStatus(Path parent, JSONObject json) {
     String pathSuffix = (String) json.get(PATH_SUFFIX_JSON);
     Path path = (pathSuffix.equals("")) ? parent : new Path(parent, pathSuffix);
@@ -963,8 +1009,7 @@ public class HttpFSFileSystem extends FileSystem
     long len = (Long) json.get(LENGTH_JSON);
     String owner = (String) json.get(OWNER_JSON);
     String group = (String) json.get(GROUP_JSON);
-    FsPermission permission =
-      new FsPermission(Short.parseShort((String) json.get(PERMISSION_JSON), 8));
+    final FsPermission permission = toFsPermission(json);
     long aTime = (Long) json.get(ACCESS_TIME_JSON);
     long mTime = (Long) json.get(MODIFICATION_TIME_JSON);
     long blockSize = (Long) json.get(BLOCK_SIZE_JSON);
@@ -1010,7 +1055,7 @@ public class HttpFSFileSystem extends FileSystem
     Map<String, String> params = new HashMap<String, String>();
     params.put(OP_PARAM, Operation.GETCONTENTSUMMARY.toString());
     HttpURLConnection conn =
-      getConnection(Operation.GETCONTENTSUMMARY.getMethod(), params, f, true);
+            getConnection(Operation.GETCONTENTSUMMARY.getMethod(), params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) ((JSONObject)
       HttpFSUtils.jsonParse(conn)).get(CONTENT_SUMMARY_JSON);
@@ -1119,13 +1164,13 @@ public class HttpFSFileSystem extends FileSystem
 
   @Override
   public void setXAttr(Path f, String name, byte[] value,
-      EnumSet<XAttrSetFlag> flag) throws IOException {
+     EnumSet<XAttrSetFlag> flag) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
     params.put(OP_PARAM, Operation.SETXATTR.toString());
     params.put(XATTR_NAME_PARAM, name);
     if (value != null) {
-      params.put(XATTR_VALUE_PARAM, 
-          XAttrCodec.encodeValue(value, XAttrCodec.HEX));
+      params.put(XATTR_VALUE_PARAM,
+              XAttrCodec.encodeValue(value, XAttrCodec.HEX));
     }
     params.put(XATTR_SET_FLAG_PARAM, EnumSetParam.toString(flag));
     HttpURLConnection conn = getConnection(Operation.SETXATTR.getMethod(),
@@ -1139,16 +1184,16 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.GETXATTRS.toString());
     params.put(XATTR_NAME_PARAM, name);
     HttpURLConnection conn = getConnection(Operation.GETXATTRS.getMethod(),
-        params, f, true);
+            params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     Map<String, byte[]> xAttrs = createXAttrMap(
-        (JSONArray) json.get(XATTRS_JSON));
+            (JSONArray) json.get(XATTRS_JSON));
     return xAttrs != null ? xAttrs.get(name) : null;
   }
 
   /** Convert xAttrs json to xAttrs map */
-  private Map<String, byte[]> createXAttrMap(JSONArray jsonArray) 
+  private Map<String, byte[]> createXAttrMap(JSONArray jsonArray)
       throws IOException {
     Map<String, byte[]> xAttrs = Maps.newHashMap();
     for (Object obj : jsonArray) {
@@ -1192,8 +1237,8 @@ public class HttpFSFileSystem extends FileSystem
   @Override
   public Map<String, byte[]> getXAttrs(Path f, List<String> names)
       throws IOException {
-    Preconditions.checkArgument(names != null && !names.isEmpty(), 
-        "XAttr names cannot be null or empty.");
+    Preconditions.checkArgument(names != null && !names.isEmpty(),
+         "XAttr names cannot be null or empty.");
     Map<String, String> params = new HashMap<String, String>();
     params.put(OP_PARAM, Operation.GETXATTRS.toString());
     Map<String, List<String>> multiValuedParams = Maps.newHashMap();
@@ -1225,4 +1270,78 @@ public class HttpFSFileSystem extends FileSystem
         params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
   }
+
+  private Collection<BlockStoragePolicy> createStoragePolicies(JSONObject map)
+          throws IOException {
+    JSONArray jsonArray = (JSONArray) map.get(STORAGE_POLICY_JSON);
+    BlockStoragePolicy[] policies = new BlockStoragePolicy[jsonArray.size()];
+    for (int i = 0; i < jsonArray.size(); i++) {
+      policies[i] = createStoragePolicy((JSONObject) jsonArray.get(i));
+    }
+    return Arrays.asList(policies);
+  }
+
+  @Override
+  public BlockLocation[] getFileBlockLocations(FileStatus file, long start,
+                                               long len) throws IOException {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETFILEBLOCKLOCATIONS.toString());
+    params.put(OFFSET_PARAM, Long.toString(start));
+    params.put(LENGTH_PARAM, Long.toString(len));
+    HttpURLConnection conn =
+            getConnection(Operation.GETFILEBLOCKLOCATIONS.getMethod(), params,
+                    file.getPath(), true);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return toBlockLocations(json);
+  }
+
+  private BlockLocation[] toBlockLocations(JSONObject json)
+          throws IOException {
+    ObjectMapper mapper = new ObjectMapper();
+    MapType subType = mapper.getTypeFactory().constructMapType(
+            Map.class,
+            String.class,
+            BlockLocation[].class);
+    MapType rootType = mapper.getTypeFactory().constructMapType(
+            Map.class,
+            mapper.constructType(String.class),
+            mapper.constructType(subType));
+
+    Map<String, Map<String, BlockLocation[]>> jsonMap = mapper
+            .readValue(json.toJSONString(), rootType);
+    Map<String, BlockLocation[]> locationMap = jsonMap
+            .get(BLOCK_LOCATIONS_JSON);
+    BlockLocation[] locationArray = locationMap.get(
+            BlockLocation.class.getSimpleName());
+    return locationArray;
+  }
+
+  private BlockStoragePolicy createStoragePolicy(JSONObject policyJson)
+          throws IOException {
+    byte id = ((Number) policyJson.get("id")).byteValue();
+    String name = (String) policyJson.get("name");
+    StorageType[] storageTypes = toStorageTypes((JSONArray) policyJson
+            .get("storageTypes"));
+    StorageType[] creationFallbacks = toStorageTypes((JSONArray) policyJson
+            .get("creationFallbacks"));
+    StorageType[] replicationFallbacks = toStorageTypes((JSONArray) policyJson
+            .get("replicationFallbacks"));
+    Boolean copyOnCreateFile = (Boolean) policyJson.get("copyOnCreateFile");
+    return new BlockStoragePolicy(id, name, storageTypes, creationFallbacks,
+            replicationFallbacks, copyOnCreateFile.booleanValue());
+  }
+
+  private StorageType[] toStorageTypes(JSONArray array) throws IOException {
+    if (array == null) {
+      return null;
+    } else {
+      List<StorageType> storageTypes = new ArrayList<StorageType>(array.size());
+      for (Object name : array) {
+        storageTypes.add(StorageType.parseStorageType((String) name));
+      }
+      return storageTypes.toArray(new StorageType[storageTypes.size()]);
+    }
+  }
+
 }

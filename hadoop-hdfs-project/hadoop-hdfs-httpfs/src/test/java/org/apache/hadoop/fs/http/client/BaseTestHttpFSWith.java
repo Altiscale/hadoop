@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.http.client;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileChecksum;
@@ -26,6 +27,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -43,6 +45,7 @@ import org.apache.hadoop.test.TestHdfs;
 import org.apache.hadoop.test.TestJetty;
 import org.apache.hadoop.test.TestJettyHelper;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -61,6 +64,7 @@ import java.io.Writer;
 import java.net.URI;
 import java.net.URL;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -105,9 +109,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     //HTTPFS configuration
     conf = new Configuration(false);
     conf.set("httpfs.proxyuser." + HadoopUsersConfTestHelper.getHadoopProxyUser() + ".groups",
-             HadoopUsersConfTestHelper.getHadoopProxyUserGroups());
+            HadoopUsersConfTestHelper.getHadoopProxyUserGroups());
     conf.set("httpfs.proxyuser." + HadoopUsersConfTestHelper.getHadoopProxyUser() + ".hosts",
-             HadoopUsersConfTestHelper.getHadoopProxyUserHosts());
+            HadoopUsersConfTestHelper.getHadoopProxyUserHosts());
     conf.set("httpfs.authentication.signature.secret.file", secretFile.getAbsolutePath());
     File httpfsSite = new File(new File(homeDir, "conf"), "httpfs-site.xml");
     os = new FileOutputStream(httpfsSite);
@@ -344,9 +348,18 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertEquals(status2.getLen(), status1.getLen());
 
     FileStatus[] stati = fs.listStatus(path.getParent());
-    Assert.assertEquals(stati.length, 1);
+    Assert.assertEquals(1, stati.length);
     Assert.assertEquals(stati[0].getPath().getName(), path.getName());
+
+    // The full path should be the path to the file. See HDFS-12139
+    FileStatus[] statl = fs.listStatus(path);
+    Assert.assertEquals(1, statl.length);
+    Assert.assertEquals(status2.getPath(), statl[0].getPath());
+    Assert.assertEquals(statl[0].getPath().getName(), path.getName());
+    Assert.assertEquals(stati[0].getPath(), statl[0].getPath());
   }
+
+
 
   private void testWorkingdirectory() throws Exception {
     FileSystem fs = FileSystem.get(getProxiedFSConf());
@@ -515,7 +528,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertEquals(httpContentSummary.getSpaceConsumed(), hdfsContentSummary.getSpaceConsumed());
     Assert.assertEquals(httpContentSummary.getSpaceQuota(), hdfsContentSummary.getSpaceQuota());
   }
-  
+
+
   /** Set xattr */
   private void testSetXAttr() throws Exception {
     if (!isLocalFS()) {
@@ -526,7 +540,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       os.write(1);
       os.close();
       fs.close();
- 
+
       final String name1 = "user.a1";
       final byte[] value1 = new byte[]{0x31, 0x32, 0x33};
       final String name2 = "user.a2";
@@ -727,6 +741,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     }
   }
 
+
   /**
    * Simple ACL tests on a file:  Set an acl, add an acl, remove one acl,
    * and remove all acls.
@@ -774,6 +789,30 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     proxyAclStat = proxyFs.getAclStatus(path);
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
+
+  }
+
+  private void testListStatusBatch() throws Exception {
+
+    Assume.assumeFalse(isLocalFS());
+    FileSystem proxyFs = FileSystem.get(getProxiedFSConf());
+
+    // Test for HDFS-12139
+    Path dir1 = new Path(getProxiedFSTestDir(), "dir1");
+    proxyFs.mkdirs(dir1);
+    Path file1 = new Path(dir1, "file1");
+    proxyFs.create(file1).close();
+
+    RemoteIterator<FileStatus> si = proxyFs.listStatusIterator(dir1);
+    FileStatus statusl = si.next();
+    FileStatus status = proxyFs.getFileStatus(file1);
+    Assert.assertEquals(file1.getName(), statusl.getPath().getName());
+    Assert.assertEquals(status.getPath(), statusl.getPath());
+
+    si = proxyFs.listStatusIterator(file1);
+    statusl = si.next();
+    Assert.assertEquals(file1.getName(), statusl.getPath().getName());
+    Assert.assertEquals(status.getPath(), statusl.getPath());
   }
 
   /**
@@ -814,7 +853,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     GET, OPEN, CREATE, APPEND, TRUNCATE, CONCAT, RENAME, DELETE, LIST_STATUS, 
     WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER, 
     SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, FILEACLS, DIRACLS, SET_XATTR,
-    GET_XATTRS, REMOVE_XATTR, LIST_XATTRS
+    GET_XATTRS, REMOVE_XATTR, LIST_XATTRS,  LIST_STATUS_BATCH,
+    GETFILEBLOCKLOCATIONS
   }
 
   private void operation(Operation op) throws Exception {
@@ -888,6 +928,12 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       case LIST_XATTRS:
         testListXAttrs();
         break;
+      case LIST_STATUS_BATCH:
+        testListStatusBatch();
+        break;
+      case GETFILEBLOCKLOCATIONS:
+        testGetFileBlockLocations();
+        break;
     }
   }
 
@@ -934,4 +980,84 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     });
   }
 
+  private void testGetFileBlockLocations() throws Exception {
+    BlockLocation[] locations1, locations2, locations11, locations21 = null;
+    Path testFile = null;
+
+    // Test single block file block locations.
+    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
+      testFile = new Path(getProxiedFSTestDir(), "singleBlock.txt");
+      DFSTestUtil.createFile(fs, testFile, (long) 1, (short) 1, 0L);
+      locations1 = fs.getFileBlockLocations(testFile, 0, 1);
+      Assert.assertNotNull(locations1);
+    }
+
+    try (FileSystem fs = getHttpFSFileSystem()) {
+      locations2 = fs.getFileBlockLocations(testFile, 0, 1);
+      Assert.assertNotNull(locations2);
+    }
+
+    verifyBlockLocations(locations1, locations2);
+
+    // Test multi-block single replica file block locations.
+    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
+      testFile = new Path(getProxiedFSTestDir(), "multipleBlocks.txt");
+      DFSTestUtil.createFile(fs, testFile, 512, (short) 2048,
+              (long) 512, (short) 1,  0L);
+      locations1 = fs.getFileBlockLocations(testFile, 0, 1024);
+      locations11 = fs.getFileBlockLocations(testFile, 1024, 2048);
+      Assert.assertNotNull(locations1);
+      Assert.assertNotNull(locations11);
+    }
+
+    try (FileSystem fs = getHttpFSFileSystem()) {
+      locations2 = fs.getFileBlockLocations(testFile, 0, 1024);
+      locations21 = fs.getFileBlockLocations(testFile, 1024, 2048);
+      Assert.assertNotNull(locations2);
+      Assert.assertNotNull(locations21);
+    }
+
+    verifyBlockLocations(locations1, locations2);
+    verifyBlockLocations(locations11, locations21);
+
+    // Test multi-block multi-replica file block locations.
+    try (FileSystem fs = FileSystem.get(getProxiedFSConf())) {
+      testFile = new Path(getProxiedFSTestDir(), "multipleBlocks.txt");
+      DFSTestUtil.createFile(fs, testFile, 512, (short) 2048,
+              (long) 512, (short) 3,  0L);
+      locations1 = fs.getFileBlockLocations(testFile, 0, 2048);
+      Assert.assertNotNull(locations1);
+    }
+
+    try (FileSystem fs = getHttpFSFileSystem()) {
+      locations2 = fs.getFileBlockLocations(testFile, 0, 2048);
+      Assert.assertNotNull(locations2);
+    }
+    verifyBlockLocations(locations1, locations2);
+  }
+
+  private void verifyBlockLocations(BlockLocation[] locations1,
+                                    BlockLocation[] locations2) throws IOException {
+    Assert.assertEquals(locations1.length, locations2.length);
+    for (int i = 0; i < locations1.length; i++) {
+      BlockLocation location1 = locations1[i];
+      BlockLocation location2 = locations2[i];
+
+      Assert.assertEquals(location1.isCorrupt(), location2.isCorrupt());
+      Assert.assertEquals(location1.getOffset(), location2.getOffset());
+      Assert.assertEquals(location1.getLength(), location2.getLength());
+
+      Arrays.sort(location1.getHosts());
+      Arrays.sort(location2.getHosts());
+      Arrays.sort(location1.getNames());
+      Arrays.sort(location2.getNames());
+      Arrays.sort(location1.getTopologyPaths());
+      Arrays.sort(location2.getTopologyPaths());
+
+      Assert.assertArrayEquals(location1.getHosts(), location2.getHosts());
+      Assert.assertArrayEquals(location1.getNames(), location2.getNames());
+      Assert.assertArrayEquals(location1.getTopologyPaths(),
+              location2.getTopologyPaths());
+    }
+  }
 }

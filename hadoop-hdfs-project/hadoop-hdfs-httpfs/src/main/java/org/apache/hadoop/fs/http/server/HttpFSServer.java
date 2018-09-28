@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.fs.http.server;
 
+import com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
+import org.apache.hadoop.fs.http.client.HttpFSUtils;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AccessTimeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AclPermissionParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.BlockSizeParam;
@@ -39,6 +41,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OperationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OverwriteParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OwnerParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.PermissionParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.PolicyNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.RecursiveParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ReplicationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.SourcesParam;
@@ -46,6 +49,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrEncodingPa
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrSetFlagParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrValueParam;
+import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.service.FileSystemAccessException;
 import org.apache.hadoop.lib.service.Groups;
@@ -64,7 +68,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
-import javax.ws.rs.OPTIONS;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -81,6 +84,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.security.AccessControlException;
+import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
 import java.util.EnumSet;
 import java.util.List;
@@ -96,6 +100,7 @@ import java.util.Map;
 @InterfaceAudience.Private
 public class HttpFSServer {
   private static Logger AUDIT_LOG = LoggerFactory.getLogger("httpfsaudit");
+  private static final Logger LOG = LoggerFactory.getLogger(HttpFSServer.class);
 
   /**
    * Executes a {@link FileSystemAccess.FileSystemExecutor} using a filesystem for the effective
@@ -106,7 +111,7 @@ public class HttpFSServer {
    *
    * @return FileSystemExecutor response
    *
-   * @throws IOException thrown if an IO error occurrs.
+   * @throws IOException thrown if an IO error occurs.
    * @throws FileSystemAccessException thrown if a FileSystemAccess releated error occurred. Thrown
    * exceptions are handled by {@link HttpFSExceptionProvider}.
    */
@@ -149,14 +154,6 @@ public class HttpFSServer {
         MessageFormat.format("Operation [{0}], invalid path [{1}], must be '/'",
                              op, path));
     }
-  }
-
-  @OPTIONS
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response options() {
-    return Response.ok().header("Access-Control-Allow-Origin", "*")
-    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-    .build();
   }
 
   /**
@@ -218,24 +215,34 @@ public class HttpFSServer {
       case OPEN: {
         //Invoking the command directly using an unmanaged FileSystem that is
         // released by the FileSystemReleaseFilter
-        FSOperations.FSOpen command = new FSOperations.FSOpen(path);
-        FileSystem fs = createFileSystem(user);
-        InputStream is = command.execute(fs);
+        final FSOperations.FSOpen command = new FSOperations.FSOpen(path);
+        final FileSystem fs = createFileSystem(user);
+        InputStream is = null;
+        UserGroupInformation ugi = UserGroupInformation
+                .createProxyUser(user.getShortUserName(),
+                        UserGroupInformation.getLoginUser());
+        try {
+          is = ugi.doAs(new PrivilegedExceptionAction<InputStream>() {
+            @Override
+            public InputStream run() throws Exception {
+              return command.execute(fs);
+            }
+          });
+        } catch (InterruptedException ie) {
+          LOG.info("Open interrupted.", ie);
+          Thread.currentThread().interrupt();
+        }
         Long offset = params.get(OffsetParam.NAME, OffsetParam.class);
         Long len = params.get(LenParam.NAME, LenParam.class);
         AUDIT_LOG.info("[{}] offset [{}] len [{}]",
                        new Object[]{path, offset, len});
         InputStreamEntity entity = new InputStreamEntity(is, offset, len);
         response =
-          Response.ok(entity).type(MediaType.APPLICATION_OCTET_STREAM)
-            .header("Access-Control-Allow-Origin", "*")
-            .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-            .build();
+          Response.ok(entity).type(MediaType.APPLICATION_OCTET_STREAM).build();
         break;
       }
       case GETFILESTATUS: {
-        FSOperations.FSFileStatus command =
-          new FSOperations.FSFileStatus(path);
+        FSOperations.FSFileStatus command = new FSOperations.FSFileStatus(path);
         Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}]", path);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
@@ -244,14 +251,11 @@ public class HttpFSServer {
       case LISTSTATUS: {
         String filter = params.get(FilterParam.NAME, FilterParam.class);
         FSOperations.FSListStatus command = new FSOperations.FSListStatus(
-          path, filter);
+	  path, filter);
         Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}] filter [{}]", path,
-                       (filter != null) ? filter : "-");
-        response = Response.ok(json).type(MediaType.APPLICATION_JSON)
-            .header("Access-Control-Allow-Origin", "*")
-            .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-            .build();
+		       (filter != null) ? filter : "-");
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
       case GETHOMEDIRECTORY: {
@@ -289,30 +293,47 @@ public class HttpFSServer {
           new FSOperations.FSFileChecksum(path);
         Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}]", path);
-        response = Response.ok(json).type(MediaType.APPLICATION_JSON)
-          .header("Access-Control-Allow-Origin", "*")
-          .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-          .build();
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
       case GETFILEBLOCKLOCATIONS: {
-        response = Response.status(Response.Status.BAD_REQUEST).build();
+        long offset = 0;
+        // In case length is not given, reset to max long
+        // in order to retrieve all file block locations
+        long len = Long.MAX_VALUE;
+        Long offsetParam = params.get(OffsetParam.NAME, OffsetParam.class);
+        Long lenParam = params.get(LenParam.NAME, LenParam.class);
+        AUDIT_LOG.info("[{}] offset [{}] len [{}]",
+                new Object[] {path, offsetParam, lenParam});
+        if (offsetParam != null && offsetParam.longValue() > 0) {
+          offset = offsetParam.longValue();
+        }
+        if (lenParam != null && lenParam.longValue() > 0) {
+          len = lenParam.longValue();
+        }
+        FSOperations.FSFileBlockLocations command =
+                new FSOperations.FSFileBlockLocations(path, offset, len);
+        @SuppressWarnings("rawtypes") Map locations = fsExecute(user, command);
+        final String json = JsonUtil.toJsonString("BlockLocations", locations);
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
       case GETACLSTATUS: {
         FSOperations.FSAclStatus command =
-                new FSOperations.FSAclStatus(path);
+		new FSOperations.FSAclStatus(path);
         Map json = fsExecute(user, command);
         AUDIT_LOG.info("ACL status for [{}]", path);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
       case GETXATTRS: {
-        List<String> xattrNames = params.getValues(XAttrNameParam.NAME, 
-            XAttrNameParam.class);
-        XAttrCodec encoding = params.get(XAttrEncodingParam.NAME, 
+        List<String> xattrNames = params.getValues(XAttrNameParam.NAME,
+	    XAttrNameParam.class);
+        XAttrCodec encoding =
+                params.get(XAttrEncodingParam.NAME, 
             XAttrEncodingParam.class);
-        FSOperations.FSGetXAttrs command = new FSOperations.FSGetXAttrs(path, 
+        FSOperations.FSGetXAttrs command =
+                new FSOperations.FSGetXAttrs(path, 
             xattrNames, encoding);
         @SuppressWarnings("rawtypes")
         Map json = fsExecute(user, command);
@@ -328,6 +349,7 @@ public class HttpFSServer {
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
+
       default: {
         throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]",
@@ -431,10 +453,7 @@ public class HttpFSServer {
             new FSOperations.FSAppend(is, path);
           fsExecute(user, command);
           AUDIT_LOG.info("[{}]", path);
-          response = Response.ok().type(MediaType.APPLICATION_JSON)
-            .header("Access-Control-Allow-Origin", "*")
-            .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
-            .build();
+          response = Response.ok().type(MediaType.APPLICATION_JSON).build();
         }
         break;
       }
@@ -684,5 +703,4 @@ public class HttpFSServer {
     }
     return response;
   }
-
 }
