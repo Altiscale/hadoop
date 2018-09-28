@@ -70,11 +70,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 @RunWith(value = Parameterized.class)
 public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
@@ -90,9 +85,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
   private void createHttpFSServer() throws Exception {
     File homeDir = TestDirHelper.getTestDir();
-    assertTrue(new File(homeDir, "conf").mkdir());
-    assertTrue(new File(homeDir, "log").mkdir());
-    assertTrue(new File(homeDir, "temp").mkdir());
+    Assert.assertTrue(new File(homeDir, "conf").mkdir());
+    Assert.assertTrue(new File(homeDir, "log").mkdir());
+    Assert.assertTrue(new File(homeDir, "temp").mkdir());
     HttpFSServerWebApp.setHomeDirForCurrentThread(homeDir.getAbsolutePath());
 
     File secretFile = new File(new File(homeDir, "conf"), "secret");
@@ -143,7 +138,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Configuration conf = new Configuration();
     conf.set("fs.webhdfs.impl", getFileSystemClass().getName());
     URI uri = new URI(getScheme() + "://" +
-            TestJettyHelper.getJettyURL().toURI().getAuthority());
+                      TestJettyHelper.getJettyURL().toURI().getAuthority());
     return FileSystem.get(uri, conf);
   }
 
@@ -151,8 +146,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     FileSystem fs = getHttpFSFileSystem();
     Assert.assertNotNull(fs);
     URI uri = new URI(getScheme() + "://" +
-            TestJettyHelper.getJettyURL().toURI().getAuthority());
-    assertEquals(fs.getUri(), uri);
+                      TestJettyHelper.getJettyURL().toURI().getAuthority());
+    Assert.assertEquals(fs.getUri(), uri);
     fs.close();
   }
 
@@ -165,7 +160,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs.close();
     fs = getHttpFSFileSystem();
     InputStream is = fs.open(new Path(path.toUri().getPath()));
-    assertEquals(is.read(), 1);
+    Assert.assertEquals(is.read(), 1);
     is.close();
     fs.close();
   }
@@ -174,7 +169,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     FileSystem fs = getHttpFSFileSystem();
     FsPermission permission = new FsPermission(FsAction.READ_WRITE, FsAction.NONE, FsAction.NONE);
     OutputStream os = fs.create(new Path(path.toUri().getPath()), permission, override, 1024,
-            (short) 2, 100 * 1024 * 1024, null);
+                                (short) 2, 100 * 1024 * 1024, null);
     os.write(1);
     os.close();
     fs.close();
@@ -182,12 +177,12 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs = FileSystem.get(getProxiedFSConf());
     FileStatus status = fs.getFileStatus(path);
     if (!isLocalFS()) {
-      assertEquals(status.getReplication(), 2);
-      assertEquals(status.getBlockSize(), 100 * 1024 * 1024);
+      Assert.assertEquals(status.getReplication(), 2);
+      Assert.assertEquals(status.getBlockSize(), 100 * 1024 * 1024);
     }
-    assertEquals(status.getPermission(), permission);
+    Assert.assertEquals(status.getPermission(), permission);
     InputStream is = fs.open(path);
-    assertEquals(is.read(), 1);
+    Assert.assertEquals(is.read(), 1);
     is.close();
     fs.close();
   }
@@ -201,7 +196,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     try {
       testCreate(path, false);
       Assert.fail("the create should have failed because the file exists " +
-              "and override is FALSE");
+                  "and override is FALSE");
     } catch (IOException ex) {
       System.out.println("#");
     } catch (Exception ex) {
@@ -225,9 +220,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs.close();
       fs = FileSystem.get(getProxiedFSConf());
       InputStream is = fs.open(path);
-      assertEquals(is.read(), 1);
-      assertEquals(is.read(), 2);
-      assertEquals(is.read(), -1);
+      Assert.assertEquals(is.read(), 1);
+      Assert.assertEquals(is.read(), 2);
+      Assert.assertEquals(is.read(), -1);
       is.close();
       fs.close();
     }
@@ -248,10 +243,10 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       final int newLength = blockSize;
 
       boolean isReady = fs.truncate(file, newLength);
-      assertTrue("Recovery is not expected.", isReady);
+      Assert.assertTrue("Recovery is not expected.", isReady);
 
       FileStatus fileStatus = fs.getFileStatus(file);
-      assertEquals(fileStatus.getLen(), newLength);
+      Assert.assertEquals(fileStatus.getLen(), newLength);
       AppendTestUtil.checkFullFile(fs, file, newLength, data, file.toString());
 
       fs.close();
@@ -275,9 +270,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs.concat(path1, new Path[]{path2, path3});
       fs.close();
       fs = FileSystem.get(config);
-      assertTrue(fs.exists(path1));
-      assertFalse(fs.exists(path2));
-      assertFalse(fs.exists(path3));
+      Assert.assertTrue(fs.exists(path1));
+      Assert.assertFalse(fs.exists(path2));
+      Assert.assertFalse(fs.exists(path3));
       fs.close();
     }
   }
@@ -293,8 +288,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs.rename(oldPath, newPath);
     fs.close();
     fs = FileSystem.get(getProxiedFSConf());
-    assertFalse(fs.exists(oldPath));
-    assertTrue(fs.exists(newPath));
+    Assert.assertFalse(fs.exists(oldPath));
+    Assert.assertTrue(fs.exists(newPath));
     fs.close();
   }
 
@@ -308,8 +303,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs.mkdirs(foe);
 
     FileSystem hoopFs = getHttpFSFileSystem();
-    assertTrue(hoopFs.delete(new Path(foo.toUri().getPath()), false));
-    assertFalse(fs.exists(foo));
+    Assert.assertTrue(hoopFs.delete(new Path(foo.toUri().getPath()), false));
+    Assert.assertFalse(fs.exists(foo));
     try {
       hoopFs.delete(new Path(bar.toUri().getPath()), false);
       Assert.fail();
@@ -317,13 +312,13 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     } catch (Exception ex) {
       Assert.fail();
     }
-    assertTrue(fs.exists(bar));
-    assertTrue(hoopFs.delete(new Path(bar.toUri().getPath()), true));
-    assertFalse(fs.exists(bar));
+    Assert.assertTrue(fs.exists(bar));
+    Assert.assertTrue(hoopFs.delete(new Path(bar.toUri().getPath()), true));
+    Assert.assertFalse(fs.exists(bar));
 
-    assertTrue(fs.exists(foe));
-    assertTrue(hoopFs.delete(foe, true));
-    assertFalse(fs.exists(foe));
+    Assert.assertTrue(fs.exists(foe));
+    Assert.assertTrue(hoopFs.delete(foe, true));
+    Assert.assertFalse(fs.exists(foe));
 
     hoopFs.close();
     fs.close();
@@ -377,15 +372,14 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     }
     Path httpFSWorkingDir = fs.getWorkingDirectory();
     fs.close();
-    assertEquals(httpFSWorkingDir.toUri().getPath(),
-            workingDir.toUri().getPath());
+    Assert.assertEquals(httpFSWorkingDir.toUri().getPath(),
+                        workingDir.toUri().getPath());
 
     fs = getHttpFSFileSystem();
     fs.setWorkingDirectory(new Path("/tmp"));
     workingDir = fs.getWorkingDirectory();
     fs.close();
-    assertEquals(workingDir.toUri().getPath(),
-            new Path("/tmp").toUri().getPath());
+    Assert.assertEquals(workingDir.toUri().getPath(), new Path("/tmp").toUri().getPath());
   }
 
   private void testMkdirs() throws Exception {
@@ -394,7 +388,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs.mkdirs(path);
     fs.close();
     fs = FileSystem.get(getProxiedFSConf());
-    assertTrue(fs.exists(path));
+    Assert.assertTrue(fs.exists(path));
     fs.close();
   }
 
@@ -419,8 +413,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs.close();
       long atNew = status1.getAccessTime();
       long mtNew = status1.getModificationTime();
-      assertEquals(mtNew, mt - 10);
-      assertEquals(atNew, at - 20);
+      Assert.assertEquals(mtNew, mt - 10);
+      Assert.assertEquals(atNew, at - 20);
     }
   }
 
@@ -438,7 +432,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     FileStatus status1 = fs.getFileStatus(path);
     fs.close();
     FsPermission permission2 = status1.getPermission();
-    assertEquals(permission2, permission1);
+    Assert.assertEquals(permission2, permission1);
 
     //sticky bit
     fs = getHttpFSFileSystem();
@@ -450,8 +444,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     status1 = fs.getFileStatus(path);
     fs.close();
     permission2 = status1.getPermission();
-    assertTrue(permission2.getStickyBit());
-    assertEquals(permission2, permission1);
+    Assert.assertTrue(permission2.getStickyBit());
+    Assert.assertEquals(permission2, permission1);
   }
 
   private void testSetOwner() throws Exception {
@@ -473,8 +467,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs = FileSystem.get(getProxiedFSConf());
       FileStatus status1 = fs.getFileStatus(path);
       fs.close();
-      assertEquals(status1.getOwner(), user);
-      assertEquals(status1.getGroup(), group);
+      Assert.assertEquals(status1.getOwner(), user);
+      Assert.assertEquals(status1.getGroup(), group);
     }
   }
 
@@ -494,7 +488,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs = FileSystem.get(getProxiedFSConf());
     FileStatus status1 = fs.getFileStatus(path);
     fs.close();
-    assertEquals(status1.getReplication(), (short) 1);
+    Assert.assertEquals(status1.getReplication(), (short) 1);
   }
 
   private void testChecksum() throws Exception {
@@ -510,10 +504,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs = getHttpFSFileSystem();
       FileChecksum httpChecksum = fs.getFileChecksum(path);
       fs.close();
-      assertEquals(httpChecksum.getAlgorithmName(),
-              hdfsChecksum.getAlgorithmName());
-      assertEquals(httpChecksum.getLength(), hdfsChecksum.getLength());
-      assertArrayEquals(httpChecksum.getBytes(), hdfsChecksum.getBytes());
+      Assert.assertEquals(httpChecksum.getAlgorithmName(), hdfsChecksum.getAlgorithmName());
+      Assert.assertEquals(httpChecksum.getLength(), hdfsChecksum.getLength());
+      Assert.assertArrayEquals(httpChecksum.getBytes(), hdfsChecksum.getBytes());
     }
   }
 
@@ -528,17 +521,12 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs = getHttpFSFileSystem();
     ContentSummary httpContentSummary = fs.getContentSummary(path);
     fs.close();
-    assertEquals(httpContentSummary.getDirectoryCount(),
-            hdfsContentSummary.getDirectoryCount());
-    assertEquals(httpContentSummary.getFileCount(),
-            hdfsContentSummary.getFileCount());
-    assertEquals(httpContentSummary.getLength(),
-            hdfsContentSummary.getLength());
-    assertEquals(httpContentSummary.getQuota(), hdfsContentSummary.getQuota());
-    assertEquals(httpContentSummary.getSpaceConsumed(),
-            hdfsContentSummary.getSpaceConsumed());
-    assertEquals(httpContentSummary.getSpaceQuota(),
-            hdfsContentSummary.getSpaceQuota());
+    Assert.assertEquals(httpContentSummary.getDirectoryCount(), hdfsContentSummary.getDirectoryCount());
+    Assert.assertEquals(httpContentSummary.getFileCount(), hdfsContentSummary.getFileCount());
+    Assert.assertEquals(httpContentSummary.getLength(), hdfsContentSummary.getLength());
+    Assert.assertEquals(httpContentSummary.getQuota(), hdfsContentSummary.getQuota());
+    Assert.assertEquals(httpContentSummary.getSpaceConsumed(), hdfsContentSummary.getSpaceConsumed());
+    Assert.assertEquals(httpContentSummary.getSpaceQuota(), hdfsContentSummary.getSpaceQuota());
   }
 
   /** Set xattr */
@@ -551,6 +539,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       os.write(1);
       os.close();
       fs.close();
+
 
       final String name1 = "user.a1";
       final byte[] value1 = new byte[]{0x31, 0x32, 0x33};
@@ -577,11 +566,11 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs = FileSystem.get(getProxiedFSConf());
       Map<String, byte[]> xAttrs = fs.getXAttrs(path);
       fs.close();
-      assertEquals(4, xAttrs.size());
-      assertArrayEquals(value1, xAttrs.get(name1));
-      assertArrayEquals(value2, xAttrs.get(name2));
-      assertArrayEquals(new byte[0], xAttrs.get(name3));
-      assertArrayEquals(value4, xAttrs.get(name4));
+      Assert.assertEquals(4, xAttrs.size());
+      Assert.assertArrayEquals(value1, xAttrs.get(name1));
+      Assert.assertArrayEquals(value2, xAttrs.get(name2));
+      Assert.assertArrayEquals(new byte[0], xAttrs.get(name3));
+      Assert.assertArrayEquals(value4, xAttrs.get(name4));
     }
   }
 
@@ -620,16 +609,16 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       names.add(name4);
       Map<String, byte[]> xAttrs = fs.getXAttrs(path, names);
       fs.close();
-      assertEquals(4, xAttrs.size());
-      assertArrayEquals(value1, xAttrs.get(name1));
-      assertArrayEquals(value2, xAttrs.get(name2));
-      assertArrayEquals(new byte[0], xAttrs.get(name3));
-      assertArrayEquals(value4, xAttrs.get(name4));
+      Assert.assertEquals(4, xAttrs.size());
+      Assert.assertArrayEquals(value1, xAttrs.get(name1));
+      Assert.assertArrayEquals(value2, xAttrs.get(name2));
+      Assert.assertArrayEquals(new byte[0], xAttrs.get(name3));
+      Assert.assertArrayEquals(value4, xAttrs.get(name4));
 
       // Get specific xattr
       fs = getHttpFSFileSystem();
       byte[] value = fs.getXAttr(path, name1);
-      assertArrayEquals(value1, value);
+      Assert.assertArrayEquals(value1, value);
       final String name5 = "a1";
       try {
         value = fs.getXAttr(path, name5);
@@ -643,11 +632,11 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs = getHttpFSFileSystem();
       xAttrs = fs.getXAttrs(path);
       fs.close();
-      assertEquals(4, xAttrs.size());
-      assertArrayEquals(value1, xAttrs.get(name1));
-      assertArrayEquals(value2, xAttrs.get(name2));
-      assertArrayEquals(new byte[0], xAttrs.get(name3));
-      assertArrayEquals(value4, xAttrs.get(name4));
+      Assert.assertEquals(4, xAttrs.size());
+      Assert.assertArrayEquals(value1, xAttrs.get(name1));
+      Assert.assertArrayEquals(value2, xAttrs.get(name2));
+      Assert.assertArrayEquals(new byte[0], xAttrs.get(name3));
+      Assert.assertArrayEquals(value4, xAttrs.get(name4));
     }
   }
 
@@ -692,8 +681,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       fs = FileSystem.get(getProxiedFSConf());
       Map<String, byte[]> xAttrs = fs.getXAttrs(path);
       fs.close();
-      assertEquals(1, xAttrs.size());
-      assertArrayEquals(value2, xAttrs.get(name2));
+      Assert.assertEquals(1, xAttrs.size());
+      Assert.assertArrayEquals(value2, xAttrs.get(name2));
     }
   }
 
@@ -725,11 +714,11 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
       fs = getHttpFSFileSystem();
       List<String> names = fs.listXAttrs(path);
-      assertEquals(4, names.size());
-      assertTrue(names.contains(name1));
-      assertTrue(names.contains(name2));
-      assertTrue(names.contains(name3));
-      assertTrue(names.contains(name4));
+      Assert.assertEquals(4, names.size());
+      Assert.assertTrue(names.contains(name1));
+      Assert.assertTrue(names.contains(name2));
+      Assert.assertTrue(names.contains(name3));
+      Assert.assertTrue(names.contains(name4));
     }
   }
 
@@ -740,15 +729,15 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
    * @throws Exception
    */
   private void assertSameAcls(AclStatus a, AclStatus b) throws Exception {
-    assertTrue(a.getOwner().equals(b.getOwner()));
-    assertTrue(a.getGroup().equals(b.getGroup()));
-    assertTrue(a.isStickyBit() == b.isStickyBit());
-    assertTrue(a.getEntries().size() == b.getEntries().size());
+    Assert.assertTrue(a.getOwner().equals(b.getOwner()));
+    Assert.assertTrue(a.getGroup().equals(b.getGroup()));
+    Assert.assertTrue(a.isStickyBit() == b.isStickyBit());
+    Assert.assertTrue(a.getEntries().size() == b.getEntries().size());
     for (AclEntry e : a.getEntries()) {
-      assertTrue(b.getEntries().contains(e));
+      Assert.assertTrue(b.getEntries().contains(e));
     }
     for (AclEntry e : b.getEntries()) {
-      assertTrue(a.getEntries().contains(e));
+      Assert.assertTrue(a.getEntries().contains(e));
     }
   }
 
@@ -861,8 +850,8 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
   }
 
   protected enum Operation {
-    GET, OPEN, CREATE, APPEND, TRUNCATE, CONCAT, RENAME, DELETE, LIST_STATUS,
-    WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER,
+    GET, OPEN, CREATE, APPEND, TRUNCATE, CONCAT, RENAME, DELETE, LIST_STATUS, 
+    WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER, 
     SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, FILEACLS, DIRACLS, SET_XATTR,
     GET_XATTRS, REMOVE_XATTR, LIST_XATTRS,  LIST_STATUS_BATCH,
     GETFILEBLOCKLOCATIONS
@@ -981,7 +970,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
   public void testOperationDoAs() throws Exception {
     createHttpFSServer();
     UserGroupInformation ugi = UserGroupInformation.createProxyUser(HadoopUsersConfTestHelper.getHadoopUsers()[0],
-            UserGroupInformation.getCurrentUser());
+                                                                    UserGroupInformation.getCurrentUser());
     ugi.doAs(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
