@@ -18,14 +18,12 @@
 
 package org.apache.hadoop.fs.http.server;
 
-import com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
-import org.apache.hadoop.fs.http.client.HttpFSUtils;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AccessTimeParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AclPermissionParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.BlockSizeParam;
@@ -41,7 +39,6 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OperationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OverwriteParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.OwnerParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.PermissionParam;
-import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.PolicyNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.RecursiveParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.ReplicationParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.SourcesParam;
@@ -68,6 +65,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.OPTIONS;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -156,6 +154,14 @@ public class HttpFSServer {
     }
   }
 
+  @OPTIONS
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response options() {
+    return Response.ok().header("Access-Control-Allow-Origin", "*")
+    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+    .build();
+  }
+
   /**
    * Special binding for '/' as it is not handled by the wildcard binding.
    *
@@ -238,11 +244,15 @@ public class HttpFSServer {
                        new Object[]{path, offset, len});
         InputStreamEntity entity = new InputStreamEntity(is, offset, len);
         response =
-          Response.ok(entity).type(MediaType.APPLICATION_OCTET_STREAM).build();
+          Response.ok(entity).type(MediaType.APPLICATION_OCTET_STREAM)
+            .header("Access-Control-Allow-Origin", "*")
+            .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+            .build();
         break;
       }
       case GETFILESTATUS: {
-        FSOperations.FSFileStatus command = new FSOperations.FSFileStatus(path);
+        FSOperations.FSFileStatus command =
+          new FSOperations.FSFileStatus(path);
         Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}]", path);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
@@ -251,11 +261,14 @@ public class HttpFSServer {
       case LISTSTATUS: {
         String filter = params.get(FilterParam.NAME, FilterParam.class);
         FSOperations.FSListStatus command = new FSOperations.FSListStatus(
-	  path, filter);
+          path, filter);
         Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}] filter [{}]", path,
-		       (filter != null) ? filter : "-");
-        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+                       (filter != null) ? filter : "-");
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON)
+            .header("Access-Control-Allow-Origin", "*")
+            .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+            .build();
         break;
       }
       case GETHOMEDIRECTORY: {
@@ -293,7 +306,10 @@ public class HttpFSServer {
           new FSOperations.FSFileChecksum(path);
         Map json = fsExecute(user, command);
         AUDIT_LOG.info("[{}]", path);
-        response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+        response = Response.ok(json).type(MediaType.APPLICATION_JSON)
+          .header("Access-Control-Allow-Origin", "*")
+          .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+          .build();
         break;
       }
       case GETFILEBLOCKLOCATIONS: {
@@ -320,20 +336,18 @@ public class HttpFSServer {
       }
       case GETACLSTATUS: {
         FSOperations.FSAclStatus command =
-		new FSOperations.FSAclStatus(path);
+                new FSOperations.FSAclStatus(path);
         Map json = fsExecute(user, command);
         AUDIT_LOG.info("ACL status for [{}]", path);
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
       case GETXATTRS: {
-        List<String> xattrNames = params.getValues(XAttrNameParam.NAME,
-	    XAttrNameParam.class);
-        XAttrCodec encoding =
-                params.get(XAttrEncodingParam.NAME, 
+        List<String> xattrNames = params.getValues(XAttrNameParam.NAME, 
+            XAttrNameParam.class);
+        XAttrCodec encoding = params.get(XAttrEncodingParam.NAME, 
             XAttrEncodingParam.class);
-        FSOperations.FSGetXAttrs command =
-                new FSOperations.FSGetXAttrs(path, 
+        FSOperations.FSGetXAttrs command = new FSOperations.FSGetXAttrs(path, 
             xattrNames, encoding);
         @SuppressWarnings("rawtypes")
         Map json = fsExecute(user, command);
@@ -349,7 +363,6 @@ public class HttpFSServer {
         response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
         break;
       }
-
       default: {
         throw new IOException(
           MessageFormat.format("Invalid HTTP GET operation [{0}]",
@@ -453,7 +466,10 @@ public class HttpFSServer {
             new FSOperations.FSAppend(is, path);
           fsExecute(user, command);
           AUDIT_LOG.info("[{}]", path);
-          response = Response.ok().type(MediaType.APPLICATION_JSON).build();
+          response = Response.ok().type(MediaType.APPLICATION_JSON)
+            .header("Access-Control-Allow-Origin", "*")
+            .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE")
+            .build();
         }
         break;
       }
@@ -703,4 +719,5 @@ public class HttpFSServer {
     }
     return response;
   }
+
 }

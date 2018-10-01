@@ -93,7 +93,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
         new Class[]{XAttrNameParam.class, XAttrEncodingParam.class});
     PARAMS_DEF.put(Operation.LISTXATTRS, new Class[]{});
     PARAMS_DEF.put(Operation.LISTSTATUS_BATCH,
-            new Class[]{StartAfterParam.class});
+        new Class[]{StartAfterParam.class});
   }
 
   public HttpFSParametersProvider() {

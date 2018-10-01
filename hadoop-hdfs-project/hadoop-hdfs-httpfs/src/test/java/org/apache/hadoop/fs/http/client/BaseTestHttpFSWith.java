@@ -109,9 +109,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     //HTTPFS configuration
     conf = new Configuration(false);
     conf.set("httpfs.proxyuser." + HadoopUsersConfTestHelper.getHadoopProxyUser() + ".groups",
-            HadoopUsersConfTestHelper.getHadoopProxyUserGroups());
+             HadoopUsersConfTestHelper.getHadoopProxyUserGroups());
     conf.set("httpfs.proxyuser." + HadoopUsersConfTestHelper.getHadoopProxyUser() + ".hosts",
-            HadoopUsersConfTestHelper.getHadoopProxyUserHosts());
+             HadoopUsersConfTestHelper.getHadoopProxyUserHosts());
     conf.set("httpfs.authentication.signature.secret.file", secretFile.getAbsolutePath());
     File httpfsSite = new File(new File(homeDir, "conf"), "httpfs-site.xml");
     os = new FileOutputStream(httpfsSite);
@@ -348,18 +348,16 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertEquals(status2.getLen(), status1.getLen());
 
     FileStatus[] stati = fs.listStatus(path.getParent());
-    Assert.assertEquals(1, stati.length);
+    Assert.assertEquals(stati.length, 1);
     Assert.assertEquals(stati[0].getPath().getName(), path.getName());
 
     // The full path should be the path to the file. See HDFS-12139
     FileStatus[] statl = fs.listStatus(path);
-    Assert.assertEquals(1, statl.length);
+    Assert.assertEquals(stati.length, 1);
     Assert.assertEquals(status2.getPath(), statl[0].getPath());
     Assert.assertEquals(statl[0].getPath().getName(), path.getName());
     Assert.assertEquals(stati[0].getPath(), statl[0].getPath());
   }
-
-
 
   private void testWorkingdirectory() throws Exception {
     FileSystem fs = FileSystem.get(getProxiedFSConf());
@@ -528,7 +526,6 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     Assert.assertEquals(httpContentSummary.getSpaceConsumed(), hdfsContentSummary.getSpaceConsumed());
     Assert.assertEquals(httpContentSummary.getSpaceQuota(), hdfsContentSummary.getSpaceQuota());
   }
-
 
   /** Set xattr */
   private void testSetXAttr() throws Exception {
@@ -741,7 +738,6 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     }
   }
 
-
   /**
    * Simple ACL tests on a file:  Set an acl, add an acl, remove one acl,
    * and remove all acls.
@@ -789,7 +785,6 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     proxyAclStat = proxyFs.getAclStatus(path);
     httpfsAclStat = httpfs.getAclStatus(path);
     assertSameAcls(httpfsAclStat, proxyAclStat);
-
   }
 
   private void testListStatusBatch() throws Exception {

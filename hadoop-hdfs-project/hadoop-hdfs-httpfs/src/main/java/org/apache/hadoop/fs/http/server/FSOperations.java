@@ -1251,7 +1251,7 @@ public class FSOperations {
   @SuppressWarnings("rawtypes")
   @InterfaceAudience.Private
   public static class FSListXAttrs implements 
-          FileSystemAccess.FileSystemExecutor<Map> {
+      FileSystemAccess.FileSystemExecutor<Map> {
     private Path path;
 
     /**

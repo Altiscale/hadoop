@@ -137,8 +137,6 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String HOME_DIR_JSON = "Path";
 
-  public static final String TRASH_DIR_JSON = "Path";
-
   public static final String SET_REPLICATION_JSON = "boolean";
 
   public static final String UPLOAD_CONTENT_TYPE= "application/octet-stream";
@@ -198,11 +196,6 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String ENC_BIT_JSON = "encBit";
 
-  public static final String DIRECTORY_LISTING_JSON = "DirectoryListing";
-  public static final String PARTIAL_LISTING_JSON = "partialListing";
-  public static final String REMAINING_ENTRIES_JSON = "remainingEntries";
-
-  public static final String STORAGE_POLICIES_JSON = "BlockStoragePolicies";
   public static final String STORAGE_POLICY_JSON = "BlockStoragePolicy";
   public static final String BLOCK_LOCATIONS_JSON = "BlockLocations";
 
@@ -474,7 +467,7 @@ public class HttpFSFileSystem extends FileSystem
     private int closeStatus;
 
     public HttpFSDataOutputStream(HttpURLConnection conn, OutputStream out, int closeStatus, Statistics stats)
-            throws IOException {
+      throws IOException {
       super(out, stats);
       this.conn = conn;
       this.closeStatus = closeStatus;
@@ -530,8 +523,8 @@ public class HttpFSFileSystem extends FileSystem
         }
       } else {
         throw new IOException(
-                MessageFormat.format("Expected HTTP status was [307], received [{0}]",
-                                     conn.getResponseCode()));
+          MessageFormat.format("Expected HTTP status was [307], received [{0}]",
+                               conn.getResponseCode()));
       }
     } catch (IOException ex) {
       if (exceptionAlreadyHandled) {
@@ -600,7 +593,7 @@ public class HttpFSFileSystem extends FileSystem
 
   /**
    * Truncate a file.
-   *
+   * 
    * @param f the file to be truncated.
    * @param newLength The size the file is to be truncated to.
    *
@@ -1055,7 +1048,7 @@ public class HttpFSFileSystem extends FileSystem
     Map<String, String> params = new HashMap<String, String>();
     params.put(OP_PARAM, Operation.GETCONTENTSUMMARY.toString());
     HttpURLConnection conn =
-            getConnection(Operation.GETCONTENTSUMMARY.getMethod(), params, f, true);
+      getConnection(Operation.GETCONTENTSUMMARY.getMethod(), params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) ((JSONObject)
       HttpFSUtils.jsonParse(conn)).get(CONTENT_SUMMARY_JSON);
@@ -1164,13 +1157,13 @@ public class HttpFSFileSystem extends FileSystem
 
   @Override
   public void setXAttr(Path f, String name, byte[] value,
-     EnumSet<XAttrSetFlag> flag) throws IOException {
+      EnumSet<XAttrSetFlag> flag) throws IOException {
     Map<String, String> params = new HashMap<String, String>();
     params.put(OP_PARAM, Operation.SETXATTR.toString());
     params.put(XATTR_NAME_PARAM, name);
     if (value != null) {
-      params.put(XATTR_VALUE_PARAM,
-              XAttrCodec.encodeValue(value, XAttrCodec.HEX));
+      params.put(XATTR_VALUE_PARAM, 
+          XAttrCodec.encodeValue(value, XAttrCodec.HEX));
     }
     params.put(XATTR_SET_FLAG_PARAM, EnumSetParam.toString(flag));
     HttpURLConnection conn = getConnection(Operation.SETXATTR.getMethod(),
@@ -1184,16 +1177,16 @@ public class HttpFSFileSystem extends FileSystem
     params.put(OP_PARAM, Operation.GETXATTRS.toString());
     params.put(XATTR_NAME_PARAM, name);
     HttpURLConnection conn = getConnection(Operation.GETXATTRS.getMethod(),
-            params, f, true);
+        params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     Map<String, byte[]> xAttrs = createXAttrMap(
-            (JSONArray) json.get(XATTRS_JSON));
+        (JSONArray) json.get(XATTRS_JSON));
     return xAttrs != null ? xAttrs.get(name) : null;
   }
 
   /** Convert xAttrs json to xAttrs map */
-  private Map<String, byte[]> createXAttrMap(JSONArray jsonArray)
+  private Map<String, byte[]> createXAttrMap(JSONArray jsonArray) 
       throws IOException {
     Map<String, byte[]> xAttrs = Maps.newHashMap();
     for (Object obj : jsonArray) {
@@ -1237,8 +1230,8 @@ public class HttpFSFileSystem extends FileSystem
   @Override
   public Map<String, byte[]> getXAttrs(Path f, List<String> names)
       throws IOException {
-    Preconditions.checkArgument(names != null && !names.isEmpty(),
-         "XAttr names cannot be null or empty.");
+    Preconditions.checkArgument(names != null && !names.isEmpty(), 
+        "XAttr names cannot be null or empty.");
     Map<String, String> params = new HashMap<String, String>();
     params.put(OP_PARAM, Operation.GETXATTRS.toString());
     Map<String, List<String>> multiValuedParams = Maps.newHashMap();
@@ -1269,16 +1262,6 @@ public class HttpFSFileSystem extends FileSystem
     HttpURLConnection conn = getConnection(Operation.REMOVEXATTR.getMethod(),
         params, f, true);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
-  }
-
-  private Collection<BlockStoragePolicy> createStoragePolicies(JSONObject map)
-          throws IOException {
-    JSONArray jsonArray = (JSONArray) map.get(STORAGE_POLICY_JSON);
-    BlockStoragePolicy[] policies = new BlockStoragePolicy[jsonArray.size()];
-    for (int i = 0; i < jsonArray.size(); i++) {
-      policies[i] = createStoragePolicy((JSONObject) jsonArray.get(i));
-    }
-    return Arrays.asList(policies);
   }
 
   @Override
@@ -1343,5 +1326,4 @@ public class HttpFSFileSystem extends FileSystem
       return storageTypes.toArray(new StorageType[storageTypes.size()]);
     }
   }
-
 }
