@@ -787,29 +787,6 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     assertSameAcls(httpfsAclStat, proxyAclStat);
   }
 
-  private void testListStatusBatch() throws Exception {
-
-    Assume.assumeFalse(isLocalFS());
-    FileSystem proxyFs = FileSystem.get(getProxiedFSConf());
-
-    // Test for HDFS-12139
-    Path dir1 = new Path(getProxiedFSTestDir(), "dir1");
-    proxyFs.mkdirs(dir1);
-    Path file1 = new Path(dir1, "file1");
-    proxyFs.create(file1).close();
-
-    RemoteIterator<FileStatus> si = proxyFs.listStatusIterator(dir1);
-    FileStatus statusl = si.next();
-    FileStatus status = proxyFs.getFileStatus(file1);
-    Assert.assertEquals(file1.getName(), statusl.getPath().getName());
-    Assert.assertEquals(status.getPath(), statusl.getPath());
-
-    si = proxyFs.listStatusIterator(file1);
-    statusl = si.next();
-    Assert.assertEquals(file1.getName(), statusl.getPath().getName());
-    Assert.assertEquals(status.getPath(), statusl.getPath());
-  }
-
   /**
    * Simple acl tests on a directory: set a default acl, remove default acls.
    * @throws Exception
@@ -848,8 +825,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     GET, OPEN, CREATE, APPEND, TRUNCATE, CONCAT, RENAME, DELETE, LIST_STATUS, 
     WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER, 
     SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, FILEACLS, DIRACLS, SET_XATTR,
-    GET_XATTRS, REMOVE_XATTR, LIST_XATTRS,  LIST_STATUS_BATCH,
-    GETFILEBLOCKLOCATIONS
+    GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, GETFILEBLOCKLOCATIONS
   }
 
   private void operation(Operation op) throws Exception {
@@ -922,9 +898,6 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
         break;
       case LIST_XATTRS:
         testListXAttrs();
-        break;
-      case LIST_STATUS_BATCH:
-        testListStatusBatch();
         break;
       case GETFILEBLOCKLOCATIONS:
         testGetFileBlockLocations();

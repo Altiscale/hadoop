@@ -404,21 +404,6 @@ public class JsonUtil {
     }
   }
 
-  /** Convert a StorageType[] to a Json array. */
-  private static Object[] toJsonArray(final StorageType[] array) {
-    if (array == null) {
-      return null;
-    } else if (array.length == 0) {
-      return EMPTY_OBJECT_ARRAY;
-    } else {
-      final Object[] a = new Object[array.length];
-      for(int i = 0; i < array.length; i++) {
-        a[i] = array[i];
-      }
-      return a;
-    }
-  }
-
   /** Convert an Object[] to a DatanodeInfo[]. */
   private static DatanodeInfo[] toDatanodeInfoArray(final List<?> objects)
       throws IOException {
@@ -854,22 +839,6 @@ public class JsonUtil {
     m.put("names", blockLocation.getNames());
     m.put("topologyPaths", blockLocation.getTopologyPaths());
     return m;
-  }
-
-  static StorageType[] toStorageTypeArray(final List<?> objects)
-          throws IOException {
-    if (objects == null) {
-      return null;
-    } else if (objects.isEmpty()) {
-      return StorageType.EMPTY_ARRAY;
-    } else {
-      final StorageType[] array = new StorageType[objects.size()];
-      int i = 0;
-      for (Object object : objects) {
-        array[i++] = StorageType.parseStorageType(object.toString());
-      }
-      return array;
-    }
   }
 
   static BlockLocation[] toBlockLocationArray(Map<?, ?> json)
