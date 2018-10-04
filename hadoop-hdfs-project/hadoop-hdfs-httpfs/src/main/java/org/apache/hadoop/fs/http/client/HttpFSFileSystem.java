@@ -90,6 +90,7 @@ import java.util.Map;
 public class HttpFSFileSystem extends FileSystem
   implements DelegationTokenRenewer.Renewable {
 
+  public static final String SERVICE_NAME = HttpFSUtils.SERVICE_NAME;
 
   public static final String SERVICE_VERSION = HttpFSUtils.SERVICE_VERSION;
 
