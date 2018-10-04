@@ -18,8 +18,6 @@
 package org.apache.hadoop.fs.http.client;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -38,14 +36,12 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
-import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.FsPermissionExtension;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -94,7 +90,6 @@ import java.util.Map;
 public class HttpFSFileSystem extends FileSystem
   implements DelegationTokenRenewer.Renewable {
 
-  public static final String SERVICE_NAME = HttpFSUtils.SERVICE_NAME;
 
   public static final String SERVICE_VERSION = HttpFSUtils.SERVICE_VERSION;
 
@@ -119,8 +114,6 @@ public class HttpFSFileSystem extends FileSystem
   public static final String XATTR_SET_FLAG_PARAM = "flag";
   public static final String XATTR_ENCODING_PARAM = "encoding";
   public static final String NEW_LENGTH_PARAM = "newlength";
-  public static final String START_AFTER_PARAM = "startAfter";
-  public static final String POLICY_NAME_PARAM = "storagepolicy";
   public static final String OFFSET_PARAM = "offset";
   public static final String LENGTH_PARAM = "length";
 
@@ -1297,30 +1290,4 @@ public class HttpFSFileSystem extends FileSystem
     return locationArray;
   }
 
-  private BlockStoragePolicy createStoragePolicy(JSONObject policyJson)
-          throws IOException {
-    byte id = ((Number) policyJson.get("id")).byteValue();
-    String name = (String) policyJson.get("name");
-    StorageType[] storageTypes = toStorageTypes((JSONArray) policyJson
-            .get("storageTypes"));
-    StorageType[] creationFallbacks = toStorageTypes((JSONArray) policyJson
-            .get("creationFallbacks"));
-    StorageType[] replicationFallbacks = toStorageTypes((JSONArray) policyJson
-            .get("replicationFallbacks"));
-    Boolean copyOnCreateFile = (Boolean) policyJson.get("copyOnCreateFile");
-    return new BlockStoragePolicy(id, name, storageTypes, creationFallbacks,
-            replicationFallbacks, copyOnCreateFile.booleanValue());
-  }
-
-  private StorageType[] toStorageTypes(JSONArray array) throws IOException {
-    if (array == null) {
-      return null;
-    } else {
-      List<StorageType> storageTypes = new ArrayList<StorageType>(array.size());
-      for (Object name : array) {
-        storageTypes.add(StorageType.parseStorageType((String) name));
-      }
-      return storageTypes.toArray(new StorageType[storageTypes.size()]);
-    }
-  }
 }
