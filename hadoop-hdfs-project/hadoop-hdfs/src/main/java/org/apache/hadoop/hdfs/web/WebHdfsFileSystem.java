@@ -18,12 +18,7 @@ res * Licensed to the Apache Software Foundation (ASF) under one
 
 package org.apache.hadoop.hdfs.web;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.EOFException;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.lang.reflect.InvocationTargetException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
@@ -1427,16 +1422,71 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
-  public BlockLocation[] getFileBlockLocations(final Path p, 
+  public BlockLocation[] getFileBlockLocations(final Path p,
       final long offset, final long length) throws IOException {
     statistics.incrementReadOps(1);
+    BlockLocation[] locations = null;
+    try {
+      locations = getFileBlockLocations(
+              GetOpParam.Op.GETFILEBLOCKLOCATIONS,
+              p, offset, length);
+    } catch (RemoteException e) {
+      // See the error message from ExceptionHandle
+      if(e.getMessage() != null &&
+              e.getMessage().contains(
+                      "Invalid value for webhdfs parameter") &&
+              e.getMessage().contains(
+                      GetOpParam.Op.GETFILEBLOCKLOCATIONS.toString())) {
+        // Old webhdfs server doesn't support GETFILEBLOCKLOCATIONS
+        // operation, fall back to query again using old API
+        // GET_BLOCK_LOCATIONS.
+        LOG.info("Invalid webhdfs operation parameter "
+                + GetOpParam.Op.GETFILEBLOCKLOCATIONS + ". Fallback to use "
+                + GetOpParam.Op.GET_BLOCK_LOCATIONS + " instead.");
+        locations = getFileBlockLocations(
+                GetOpParam.Op.GET_BLOCK_LOCATIONS,
+                p, offset, length);
+      }
+    }
+    return locations;
+  }
 
-    final HttpOpParam.Op op = GetOpParam.Op.GETFILEBLOCKLOCATIONS;
-    return new FsPathResponseRunner<BlockLocation[]>(op, p,
-        new OffsetParam(offset), new LengthParam(length)) {
+  /**
+   * Get file block locations implementation. Provide a operation
+   * parameter to determine how to get block locations from a webhdfs
+   * server. Older server only supports <b>GET_BLOCK_LOCATIONS</b> but
+   * not <b>GETFILEBLOCKLOCATIONS</b>.
+   *
+   * @param path path to the file
+   * @param offset start offset in the given file
+   * @param length of the file to get locations for
+   * @param operation
+   *   Valid operation is either
+   *   {@link org.apache.hadoop.hdfs.web.resources.GetOpParam.Op
+   *   #GET_BLOCK_LOCATIONS} or
+   *   {@link org.apache.hadoop.hdfs.web.resources.GetOpParam.Op
+   *   #GET_BLOCK_LOCATIONS}
+   * @throws IOException
+   *   Http connection error, decoding error or given
+   *   operation is not valid
+   */
+  @VisibleForTesting
+  protected BlockLocation[] getFileBlockLocations(
+          final GetOpParam.Op operation, final Path path,
+          final long offset, final long length) throws IOException {
+    return new FsPathResponseRunner<BlockLocation[]>(operation, path,
+            new OffsetParam(offset), new LengthParam(length)) {
       @Override
       BlockLocation[] decodeResponse(Map<?,?> json) throws IOException {
-        return JsonUtil.toBlockLocationArray(json);
+        switch(operation) {
+          case GETFILEBLOCKLOCATIONS:
+            return JsonUtil.toBlockLocationArray(json);
+          case GET_BLOCK_LOCATIONS:
+            return DFSUtil.locatedBlocks2Locations(
+                    JsonUtil.toLocatedBlocks(json));
+          default :
+            throw new IOException("Unknown operation " + operation.name());
+        }
       }
     }.run();
   }
