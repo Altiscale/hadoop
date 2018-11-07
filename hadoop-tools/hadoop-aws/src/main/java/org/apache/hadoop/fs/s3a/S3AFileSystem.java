@@ -94,6 +94,7 @@ public class S3AFileSystem extends FileSystem {
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private CannedAccessControlList cannedACL;
   private String serverSideEncryptionAlgorithm;
+  private boolean s3IsRequesterPays = false;
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
@@ -185,6 +186,14 @@ public class S3AFileSystem extends FileSystem {
     String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
     if(!signerOverride.isEmpty()) {
       awsConf.setSignerOverride(signerOverride);
+    }
+
+    s3IsRequesterPays = conf.getBoolean(ALLOW_REQUESTER_PAYS,
+        DEFAULT_ALLOW_REQUESTER_PAYS);
+
+    if (s3IsRequesterPays == true) {
+      LOG.info("fs.s3a.requester-pays.enabled has been set to true. You will be charged for any requests made to Requester Pays buckets.");
+      LOG.info("For more information on Requester Pays buckets visit: http://docs.aws.amazon.com/AmazonS3/latest/dev/RequesterPaysBuckets.html");
     }
 
     initProxySupport(conf, awsConf, secureConnections);
@@ -449,7 +458,7 @@ public class S3AFileSystem extends FileSystem {
     }
 
     return new FSDataInputStream(new S3AInputStream(bucket, pathToKey(f), 
-      fileStatus.getLen(), s3, statistics));
+      fileStatus.getLen(), s3, statistics,s3IsRequesterPays));
   }
 
   /**

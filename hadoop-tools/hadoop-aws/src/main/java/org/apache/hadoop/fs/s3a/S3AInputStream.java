@@ -44,9 +44,14 @@ public class S3AInputStream extends FSInputStream {
   private long contentLength;
   public static final Logger LOG = S3AFileSystem.LOG;
   public static final long CLOSE_THRESHOLD = 4096;
+  private boolean isRequesterPays = false;
 
   public S3AInputStream(String bucket, String key, long contentLength, AmazonS3Client client,
                         FileSystem.Statistics stats) {
+    this(bucket,key,contentLength,client,stats,false);
+  }
+  public S3AInputStream(String bucket, String key, long contentLength, AmazonS3Client client,
+                        FileSystem.Statistics stats, boolean isRequesterPays) {
     this.bucket = bucket;
     this.key = key;
     this.contentLength = contentLength;
@@ -55,8 +60,8 @@ public class S3AInputStream extends FSInputStream {
     this.pos = 0;
     this.closed = false;
     this.wrappedStream = null;
+    this.isRequesterPays = isRequesterPays;
   }
-
   private void openIfNeeded() throws IOException {
     if (wrappedStream == null) {
       reopen(0);
@@ -87,7 +92,7 @@ public class S3AInputStream extends FSInputStream {
 
     GetObjectRequest request = new GetObjectRequest(bucket, key);
     request.setRange(pos, contentLength-1);
-
+    request.setRequesterPays(isRequesterPays);
     wrappedStream = client.getObject(request).getObjectContent();
 
     if (wrappedStream == null) {
