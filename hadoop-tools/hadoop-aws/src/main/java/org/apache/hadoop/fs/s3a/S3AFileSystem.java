@@ -984,7 +984,8 @@ public class S3AFileSystem extends FileSystem {
     if (!key.isEmpty()) {
       try {
         GetObjectMetadataRequest objectMetadataRequest = new GetObjectMetadataRequest(bucket, key);
-        objectMetadataRequest.putCustomRequestHeader("x-amz-request-payer", "requester");
+        if(s3IsRequesterPays)
+          objectMetadataRequest.putCustomRequestHeader("x-amz-request-payer", "requester");
         ObjectMetadata meta = s3.getObjectMetadata(objectMetadataRequest);
 
         statistics.incrementReadOps(1);
