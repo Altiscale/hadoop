@@ -96,7 +96,7 @@ public class S3AInputStream extends FSInputStream {
 
     GetObjectRequest request = new GetObjectRequest(bucket, key);
     request.setRange(pos, contentLength-1);
-    
+
     request.setRequesterPays(isRequesterPays);
     wrappedStream = client.getObject(request).getObjectContent();
 
