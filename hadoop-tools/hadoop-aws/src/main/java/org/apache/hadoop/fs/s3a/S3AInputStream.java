@@ -44,6 +44,9 @@ public class S3AInputStream extends FSInputStream {
   private long contentLength;
   public static final Logger LOG = S3AFileSystem.LOG;
   public static final long CLOSE_THRESHOLD = 4096;
+  /**
+   * This boolean stores whether the S3 Requester Pays flag is enabled or not
+   */
   private boolean isRequesterPays = false;
 
   public S3AInputStream(String bucket, String key, long contentLength, AmazonS3Client client,
@@ -62,6 +65,7 @@ public class S3AInputStream extends FSInputStream {
     this.wrappedStream = null;
     this.isRequesterPays = isRequesterPays;
   }
+
   private void openIfNeeded() throws IOException {
     if (wrappedStream == null) {
       reopen(0);
@@ -92,6 +96,7 @@ public class S3AInputStream extends FSInputStream {
 
     GetObjectRequest request = new GetObjectRequest(bucket, key);
     request.setRange(pos, contentLength-1);
+    
     request.setRequesterPays(isRequesterPays);
     wrappedStream = client.getObject(request).getObjectContent();
 
