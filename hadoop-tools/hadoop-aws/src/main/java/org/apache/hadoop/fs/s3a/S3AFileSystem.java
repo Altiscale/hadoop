@@ -96,7 +96,7 @@ public class S3AFileSystem extends FileSystem {
   private CannedAccessControlList cannedACL;
   private String serverSideEncryptionAlgorithm;
   /**
-   * This boolean stores whether the S3 Requester Pays flag is enabled or not
+   * This boolean stores whether the S3 Requester Pays flag is enabled or not.
    */
   private boolean s3IsRequesterPays = false;
 

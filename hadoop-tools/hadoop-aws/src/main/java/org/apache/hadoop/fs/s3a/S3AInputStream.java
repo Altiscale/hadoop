@@ -45,25 +45,27 @@ public class S3AInputStream extends FSInputStream {
   public static final Logger LOG = S3AFileSystem.LOG;
   public static final long CLOSE_THRESHOLD = 4096;
   /**
-   * This boolean stores whether the S3 Requester Pays flag is enabled or not
+   * This boolean stores whether the S3 Requester Pays flag is enabled or not.
    */
   private boolean isRequesterPays = false;
 
   public S3AInputStream(String bucket, String key, long contentLength, AmazonS3Client client,
                         FileSystem.Statistics stats) {
-    this(bucket,key,contentLength,client,stats,false);
+    this(bucket, key, contentLength, client, stats, false);
   }
-  public S3AInputStream(String bucket, String key, long contentLength, AmazonS3Client client,
-                        FileSystem.Statistics stats, boolean isRequesterPays) {
-    this.bucket = bucket;
-    this.key = key;
-    this.contentLength = contentLength;
-    this.client = client;
-    this.stats = stats;
+  public S3AInputStream(final String s3Bucket, final String s3BucketKey,
+                        final long contentLen, final AmazonS3Client s3Client,
+                        final FileSystem.Statistics fsStats,
+                        final boolean doesRequesterPays) {
+    this.bucket = s3Bucket;
+    this.key = s3BucketKey;
+    this.contentLength = contentLen;
+    this.client = s3Client;
+    this.stats = fsStats;
     this.pos = 0;
     this.closed = false;
     this.wrappedStream = null;
-    this.isRequesterPays = isRequesterPays;
+    this.isRequesterPays = doesRequesterPays;
   }
 
   private void openIfNeeded() throws IOException {
