@@ -33,6 +33,16 @@ public class Constants {
   public static final String SECURE_CONNECTIONS = "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
 
+  /**
+   *  Property to configure S3 Requester Pays flag.
+   */
+  public static final String ALLOW_REQUESTER_PAYS =
+      "fs.s3a.requester-pays.enabled";
+  /**
+   * Default value for the property 'fs.s3a.requester-pays.enabled'.
+   */
+  public static final boolean DEFAULT_ALLOW_REQUESTER_PAYS = false;
+
   //use a custom endpoint?
   public static final String ENDPOINT = "fs.s3a.endpoint";
   //connect to s3 through a proxy server?

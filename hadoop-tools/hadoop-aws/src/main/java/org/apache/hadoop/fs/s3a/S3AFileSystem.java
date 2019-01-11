@@ -42,13 +42,14 @@ import com.amazonaws.auth.AWSCredentialsProviderChain;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.transfer.Copy;
 import com.amazonaws.services.s3.transfer.TransferManager;
@@ -94,6 +95,10 @@ public class S3AFileSystem extends FileSystem {
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private CannedAccessControlList cannedACL;
   private String serverSideEncryptionAlgorithm;
+  /**
+   * This boolean stores whether the S3 Requester Pays flag is enabled or not.
+   */
+  private boolean s3IsRequesterPays = false;
 
   // The maximum number of entries that can be deleted in any call to s3
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
@@ -185,6 +190,17 @@ public class S3AFileSystem extends FileSystem {
     String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
     if(!signerOverride.isEmpty()) {
       awsConf.setSignerOverride(signerOverride);
+    }
+
+    s3IsRequesterPays = conf.getBoolean(ALLOW_REQUESTER_PAYS,
+        DEFAULT_ALLOW_REQUESTER_PAYS);
+
+    if (s3IsRequesterPays) {
+      LOG.info("fs.s3a.requester-pays.enabled has been set to true. You will"
+          + " be charged for any requests made to Requester Pays buckets.");
+      LOG.info("For more information on Requester Pays buckets visit: "
+          + "http://docs.aws.amazon.com/AmazonS3/latest/dev"
+          + "/RequesterPaysBuckets.html");
     }
 
     initProxySupport(conf, awsConf, secureConnections);
@@ -448,8 +464,8 @@ public class S3AFileSystem extends FileSystem {
       throw new FileNotFoundException("Can't open " + f + " because it is a directory");
     }
 
-    return new FSDataInputStream(new S3AInputStream(bucket, pathToKey(f), 
-      fileStatus.getLen(), s3, statistics));
+    return new FSDataInputStream(new S3AInputStream(bucket, pathToKey(f),
+      fileStatus.getLen(), s3, statistics, s3IsRequesterPays));
   }
 
   /**
@@ -980,7 +996,14 @@ public class S3AFileSystem extends FileSystem {
 
     if (!key.isEmpty()) {
       try {
-        ObjectMetadata meta = s3.getObjectMetadata(bucket, key);
+        GetObjectMetadataRequest objectMetadataRequest =
+            new GetObjectMetadataRequest(bucket, key);
+        if (s3IsRequesterPays) {
+          objectMetadataRequest.putCustomRequestHeader("x-amz-request-payer",
+              "requester");
+        }
+        ObjectMetadata meta = s3.getObjectMetadata(objectMetadataRequest);
+
         statistics.incrementReadOps(1);
 
         if (objectRepresentsDirectory(key, meta.getContentLength())) {
