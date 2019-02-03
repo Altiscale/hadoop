@@ -7,31 +7,31 @@ ENV MAVEN_OPTS="-Xmx2g -XX:ReservedCodeCacheSize=1024m"
 RUN cd /opt/spark && \
     mvn -Pyarn -Phadoop-2.7 -Dhadoop.version=2.7.4 -Phive -Phive-thriftserver -DskipTests clean package
 
-ENV SPARK_HOME=/opt/spark
-RUN cd /root && \
-    curl -O https://repo.continuum.io/archive/Anaconda3-5.0.1-Linux-x86_64.sh
-RUN bash Anaconda3-5.0.1-Linux-x86_64.sh -b -p /opt/anaconda
-ENV PATH="$PATH:/opt/anaconda/bin"
-RUN python3 -m pip install jupyter
+# ENV SPARK_HOME=/opt/spark
+# RUN cd /root && \
+#     curl -O https://repo.continuum.io/archive/Anaconda3-5.0.1-Linux-x86_64.sh
+# RUN bash Anaconda3-5.0.1-Linux-x86_64.sh -b -p /opt/anaconda
+# ENV PATH="$PATH:/opt/anaconda/bin"
+# RUN python3 -m pip install jupyter
 
 # install go juptyer kernal
-RUN apt-get install -y libkrb5-dev libzmq3-dev golang-1.8
-RUN conda install requests-kerberos -y
-ENV PATH=$PATH:/usr/lib/go-1.8/bin:/root/go/bin
-ENV GOPATH=/root/go
-RUN go get github.com/yunabe/lgo/cmd/lgo && \
-    go get -d github.com/yunabe/lgo/cmd/lgo-internal
-ENV LGOPATH=/root/go/src/github.com/yunabe/lgo
-RUN lgo install && \
-    python3 /root/go/src/github.com/yunabe/lgo/bin/install_kernel && \
-    pip install sparkmagic && \
-    jupyter nbextension enable --py --sys-prefix widgetsnbextension && \
-    jupyter-kernelspec install /opt/anaconda/lib/python3.6/site-packages/sparkmagic/kernels/sparkkernel && \
-    jupyter-kernelspec install /opt/anaconda/lib/python3.6/site-packages/sparkmagic/kernels/pysparkkernel && \
-    jupyter-kernelspec install /opt/anaconda/lib/python3.6/site-packages/sparkmagic/kernels/pyspark3kernel && \
-    jupyter-kernelspec install /opt/anaconda/lib/python3.6/site-packages/sparkmagic/kernels/sparkrkernel
-COPY dev-support/docker-compose/files/config.json /root/.sparkmagic/config.json
-RUN jupyter serverextension enable --py sparkmagic
+# RUN apt-get install -y libkrb5-dev libzmq3-dev golang-1.8
+# RUN conda install requests-kerberos -y
+# ENV PATH=$PATH:/usr/lib/go-1.8/bin:/root/go/bin
+# ENV GOPATH=/root/go
+# RUN go get github.com/yunabe/lgo/cmd/lgo && \
+#     go get -d github.com/yunabe/lgo/cmd/lgo-internal
+# ENV LGOPATH=/root/go/src/github.com/yunabe/lgo
+# RUN lgo install && \
+#     python3 /root/go/src/github.com/yunabe/lgo/bin/install_kernel && \
+#     pip install sparkmagic && \
+#     jupyter nbextension enable --py --sys-prefix widgetsnbextension && \
+#     jupyter-kernelspec install /opt/anaconda/lib/python3.6/site-packages/sparkmagic/kernels/sparkkernel && \
+#     jupyter-kernelspec install /opt/anaconda/lib/python3.6/site-packages/sparkmagic/kernels/pysparkkernel && \
+#     jupyter-kernelspec install /opt/anaconda/lib/python3.6/site-packages/sparkmagic/kernels/pyspark3kernel && \
+#     jupyter-kernelspec install /opt/anaconda/lib/python3.6/site-packages/sparkmagic/kernels/sparkrkernel
+# COPY dev-support/docker-compose/files/config.json /root/.sparkmagic/config.json
+# RUN jupyter serverextension enable --py sparkmagic
 
 COPY dev-support/docker-compose/scripts/start-spark.sh /root/start-spark.sh
 

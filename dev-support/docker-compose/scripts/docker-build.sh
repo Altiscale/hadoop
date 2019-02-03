@@ -8,4 +8,4 @@ docker build -t hadoop-rm:2.7.4 -f dev-support/docker-compose/scripts/Dockerfile
 docker build -t hadoop-nm:2.7.4 -f dev-support/docker-compose/scripts/Dockerfile-nm .
 docker build -t hadoop-httpfs:2.7.4 -f dev-support/docker-compose/scripts/Dockerfile-httpfs .
 docker build -t hadoop-hive:2.7.4 -f dev-support/docker-compose/scripts/Dockerfile-hive .
-docker build -t hadoop-spark:2.7.4 -f dev-support/docker-compose/scripts/Dockerfile-spark .
+# docker build -t hadoop-spark:2.7.4 -f dev-support/docker-compose/scripts/Dockerfile-spark .
