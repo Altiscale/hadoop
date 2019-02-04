@@ -72,7 +72,7 @@ httpfs1:
   hostname: httpfs1
   container_name: httpfs1
   ports:
-    - "14000:14000"
+    - "14002:14000"
   domainname: hadoop
   net: hadoop
   volumes:
@@ -135,17 +135,3 @@ hive:
     - ${HADOOP_COMPOSE_DIR}/config:/etc/hive
     - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
 
-spark:
-  image: hadoop-spark:2.7.4
-  hostname: spark
-  container_name: spark
-  domainname: hadoop
-  net: hadoop
-  volumes:
-    - ${HADOOP_COMPOSE_DIR}/config:/etc/hadoop
-    - ${HADOOP_COMPOSE_DIR}/config:/etc/hive
-    - ${HADOOP_COMPOSE_DIR}/kerberos/krb5kdc:/var/lib/krb5kdc
-    - ${HADOOP_COMPOSE_DIR}/files:/root/files
-  ports:
-    - "8008:8008"
-    - "8998:8998"
