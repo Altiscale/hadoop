@@ -1,0 +1,5 @@
+imports dslVersion:"1.2", {
+  targetRootDir id:"default",{
+    artifactFile "com.google.code.findbugs:findbugs:jar:3.0.1"
+  }
+}
