@@ -16,9 +16,6 @@ export HADOOP_PROTOC_PATH=/opt/protobuf/bin/protoc
 
 cd $MY_DIR
 
-#mkdir -p /tmp/findbugs
-
-#tar -xzf /imports/findbugs-3.0.1.jar -C /tmp/findbugs/
 mkdir -p $FINDBUGS_HOME/src/xsl
 unzip /imports/findbugs-*.jar "*.xsl" -d $FINDBUGS_HOME/src/xsl/
 
