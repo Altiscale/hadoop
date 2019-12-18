@@ -31,12 +31,15 @@ ls -l $FINDBUGS_HOME/src/xsl/
 HADOOP_VERSION="${HADOOP_VERSION:-2.7.7}"
 ARTIFACT_VERSION="${HADOOP_VERSION}"
 export MAVEN_OPTS="-Xms256m -Xmx512m"
+export TOMCAT_DOWNLOAD_URL=http://nexus.wdf.sap.corp:8081/nexus/content/groups/build.snapshots/org/apache/tomcat/tomcat/7.0.42/tomcat-7.0.42.zip
+export TOMCAT_VERSION=7.0.42
+
 
 mvn versions:set -DnewVersion=${ARTIFACT_VERSION}
 if [ "$RUN_UNIT_TESTS" == "true" ]; then
   mvn -Pdist,docs,src,native --fail-never -Dtar -Dbundle.snappy  -Dsnappy.lib=/usr/lib64 -Drequire.fuse=true -Drequire.snappy -Dcontainer-executor.conf.dir=/etc/hadoop clean install
 else
-  mvn -Pdist,docs,src,native -Dtar -DskipTests -Dbundle.snappy -Dsnappy.lib=/usr/lib64 -Drequire.fuse=true -Drequire.snappy -Dcontainer-executor.conf.dir=/etc/hadoop clean install -X
+  mvn -Pdist,docs,src,native -Dtar -DskipTests -Dbundle.snappy -Dsnappy.lib=/usr/lib64 -Drequire.fuse=true -Drequire.snappy -Dcontainer-executor.conf.dir=/etc/hadoop -Dtomcat.download.url=$TOMCAT_DOWNLOAD_URL -Dtomcat.version=$TOMCAT_VERSION clean install
 fi
 
 
