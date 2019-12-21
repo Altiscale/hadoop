@@ -1,5 +1,7 @@
 imports dslVersion:"1.2", {
   targetRootDir id:"default",{
     artifactFile "com.google.code.findbugs:findbugs:jar:3.0.1"
+    artifactFile "com.sap.bds.ats-altiscale:hadoop-lzo:jar:0.4.18"
+    artifactFile "com.sap.bds.ats-altiscale:hadoop-lzo-libgplcompression:tar.gz:0.4.18"
   }
 }
