@@ -1,0 +1,276 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides: datanode
+# Required-Start: $local_fs $named $network $portmap
+# Required-Stop: $local_fs $network $portmap
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Hadoop DataNode
+# Description: The Hadoop DataNode provides block storage for the Hadoop Distributed File System (HDFS).
+### END INIT INFO
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Check if datanode service config exists, if yes, source it
+[ -e /etc/sysconfig/hadoop_datanode ] && . /etc/sysconfig/hadoop_datanode
+
+# Set OOM_ADJ, if defined
+OOM_ADJ=${OOM_ADJ:-0}
+
+HDFS_USER=${HDFS_USER:-hdfs}
+HADOOP_PID_DIR=${HADOOP_PID_DIR:-/var/hadoop/hdfs/run/}
+
+# Set the ulimit
+if [ -n "$NOFILE"  ]
+then
+    ulimit -n $NOFILE
+fi
+
+if [ -n "$NPROC" ]
+then
+    ulimit -u $NPROC
+fi
+
+if [[ "x" == "${JAVA_HOME}x" && -f /etc/profile.d/jdk.sh ]]
+then
+    source /etc/profile.d/jdk.sh
+fi
+
+if [ "x" == "${JAVA_HOME}x" ]
+then
+    echo "JAVA_HOME not set"
+    exit 1
+fi
+
+if [ "x" == "${HADOOP_CONF_DIR}x" ]
+then
+    source //etc/profile.d/hadoop-env.sh
+fi
+
+if [ "x" == "${HADOOP_CONF_DIR}x" ]
+then
+    echo "Hadoop environment not configured"
+    exit 1
+fi
+
+if [ "x" != "${HDFS_LOG_DIR}x" ]
+then
+    export HADOOP_LOG_DIR=$HDFS_LOG_DIR
+fi
+
+if [ "x" != "${DATANODE_OPTS}x" ]
+then
+    echo "DATANODE_OPTS is not configured"
+    exit 1
+fi
+
+
+RETVAL=0
+# USER is required by hadoop-daemon.sh
+export USER=$HDFS_USER
+SERVICE="datanode"
+SERVICENAME="DataNode"
+DESC="Hadoop ${SERVICE} daemon"
+HADOOP_PID_DIR=/var/hadoop/hdfs/run/
+
+if [ -n "$HADOOP_SECURE_DN_USER" ]; then
+  PIDFILE="${HADOOP_PID_DIR}/hadoop_secure_dn.pid"
+  LOCKFILE="${HADOOP_PID_DIR}/hadoop-root-${SERVICE}.lock"
+  PROCNAME="jsvc"
+else
+  PIDFILE="${HADOOP_PID_DIR}/hadoop-${USER}-${SERVICE}.pid"
+  LOCKFILE="${HADOOP_PID_DIR}/hadoop-${USER}-${SERVICE}.lock"
+  PROCNAME="java"
+fi
+
+# HADOOP_DATANODE_OPTS is used by ${HADOOP_HOME}/bin/hdfs
+# which is called from ${HADOOP_HOME}/sbin/hadoop-daemon.sh
+# which is called by this initialization script.
+# Note that ${HADOOP_HOME}/sbin/hadoop-daemon.sh sources
+# ${HADOOP_CONF_DIR}/hadoop-env.sh
+# bin/hdfs does not yet implement a HEAPSIZE option.
+export HADOOP_SECURITY_LOGGER="${HADOOP_SECURITY_LOGGER:-INFO,DRFAS}"
+export HADOOP_DATANODE_OPTS="$DATANODE_OPTS\
+ -Xloggc:${HDFS_LOG_DIR}/hadoop-${USER}-${SERVICE}-gc.log-`date +'%Y%m%d%H%M'`\
+ -Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER:-INFO,DRFAS}"
+
+start() {
+  checkstatus &>/dev/null
+
+  if [[ $RETVAL -eq 0 ]]; then
+    echo "$DESC already running"
+    RETVAL=0
+    return $RETVAL
+  fi
+
+  if [[ -e $LOCKFILE ]]; then
+    if [[ $RETVAL -ge 3 ]]; then
+      echo "$DESC: ignoring $LOCKFILE because process no longer exists"
+      rm $LOCKFILE
+      rm $PIDFILE
+    else
+      echo "$DESC cannot start, another process has the lock. rm ${LOCKFILE} to override"
+      RETVAL=1
+      return $RETVAL
+    fi
+  fi
+
+  touch $LOCKFILE
+
+  echo -n "Starting $DESC: "
+
+  if [ -n "$HADOOP_SECURE_DN_USER" ]; then
+    /usr/local/bin/daemon -i -c -o ${HADOOP_LOG_DIR}/daemon-${SERVICE}.out ${HADOOP_HOME}/sbin/hadoop-daemon.sh start ${SERVICE} $1
+  else
+    /usr/local/bin/daemon -i -u ${USER} -c -o ${HADOOP_LOG_DIR}/daemon-${SERVICE}.out ${HADOOP_HOME}/sbin/hadoop-daemon.sh start ${SERVICE} $1
+  fi
+
+  RETVAL=$?
+
+  if [ $RETVAL -ne 0 ]; then
+    echo failure
+    if [[ -e $PIDFILE ]]; then
+        kill `cat $PIDFILE`
+    fi
+
+    rm -f $PIDFILE $LOCKFILE
+  else
+    timeout=0
+    while [ ! -f $PIDFILE ]; do
+        if [ $((timeout++)) -ne 60 ]; then
+            sleep 1
+        else
+            echo "Timeout waiting on PIDFILE: $PIDFILE"
+            return $((RETVAL=42))
+        fi
+    done
+    echo $OOM_ADJ > "/proc/$(cat $PIDFILE)/oom_adj"
+
+    # in case of kerberos there  is going to be second datanode process running as hdfs
+    if [ -n "$HADOOP_SECURE_DN_USER" ]; then
+      timeout=0
+      while ! proc_id=$(pgrep -u hdfs -P $(cat $PIDFILE)); do
+        if [ $((timeout++)) -ne 60 ]; then
+            sleep 1
+        else
+            echo "Timeout waiting on hdfs datanode process (kerberos)"
+            return $((RETVAL=42))
+        fi
+      done
+      echo $OOM_ADJ > "/proc/$proc_id/oom_adj"
+    fi
+    echo success
+  fi
+
+  return $RETVAL
+}
+
+stop() {
+  checkstatus &>/dev/null
+
+  if [[ $RETVAL -ne 0 ]]; then
+    echo "$DESC already stopped"
+    rm -f $PIDFILE $LOCKFILE
+    RETVAL=0
+    return $RETVAL
+  fi
+
+  echo -n "Stopping $DESC: "
+
+  if [ -n "$HADOOP_SECURE_DN_USER" ]; then
+    /usr/local/bin/daemon -i ${HADOOP_HOME}/sbin/hadoop-daemon.sh stop ${SERVICE}
+  else
+    /usr/local/bin/daemon -i -u ${USER} ${HADOOP_HOME}/sbin/hadoop-daemon.sh stop ${SERVICE}
+  fi
+
+  RETVAL=$?
+
+  sleep 5
+
+  if [ $RETVAL -eq 0 ]; then
+    echo success
+    rm -f $PIDFILE $LOCKFILE
+  else
+    echo failure
+  fi
+
+  return $RETVAL
+}
+
+restart() {
+  stop
+  start
+}
+
+checkstatus(){
+  if [ ! -e $PIDFILE ]; then
+    echo "$DESC is not running (no pid file)"
+    RETVAL=1
+    return $RETVAL
+  fi
+
+  PID=`cat $PIDFILE`
+
+  if [ "${PID}x" == "x" ]; then
+     echo "$DESC is not running (no pid in $PIDFILE )"
+     RETVAL=2
+     return $RETVAL
+  fi
+
+  ps -p $PID > /dev/null
+
+  if [ $? -ne 0 ]; then
+    echo "$DESC is not running (pid $PID not found)"
+    RETVAL=3
+    return $RETVAL
+  fi
+
+  cmd=`ps -p ${PID} h -o%c`
+
+  if [ "x${PROCNAME}" != "x${cmd}" ]; then
+    echo "$DESC is not running (pid $PID not running ${PROCNAME})"
+    RETVAL=4
+    return $RETVAL
+  fi
+
+  echo "$DESC (pid $PID) is running"
+  RETVAL=0
+  return $RETVAL
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+	rollback)
+    start -rollback
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+    checkstatus
+    ;;
+  restart)
+    restart
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|status|restart|rollback}"
+    exit 1
+esac
+
+exit $RETVAL

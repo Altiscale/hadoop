@@ -1,0 +1,211 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides: httpfs
+# Required-Start: $local_fs $named $network $portmap
+# Required-Stop: $local_fs $network $portmap
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Hadoop httpfs gateway
+# Description: HttpFS is a server that provides a REST HTTP gateway supporting all HDFS File System operations (read and write).
+#              And it is inteoperable with the webhdfs REST HTTP API.
+### END INIT INFO
+
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Check if datanode service config exists, if yes, source it
+[ -e /etc/sysconfig/hadoop_httpfs ] && . /etc/sysconfig/hadoop_httpfs
+
+HTTPFS_USER=${HTTPFS_USER:-httpfs}
+HADOOP_PID_DIR=${HADOOP_PID_DIR:-"/var/hadoop/hdfs/run/"}
+
+if [[ "x" == "${JAVA_HOME}x" && -f /etc/profile.d/jdk.sh ]]
+then
+    source /etc/profile.d/jdk.sh
+fi
+
+if [ "x" == "${JAVA_HOME}x" ]
+then
+    echo "JAVA_HOME not set"
+    exit 1
+fi
+
+if [ "x" == "${HADOOP_CONF_DIR}x" ]
+then
+    source /etc/profile.d/hadoop-env.sh
+fi
+
+if [ "x" == "${HADOOP_CONF_DIR}x" ]
+then
+    echo "Hadoop environment not configured"
+    exit 1
+fi
+
+if [ "x" != "${HDFS_LOG_DIR}x" ]
+then
+    export HADOOP_LOG_DIR=$HDFS_LOG_DIR
+fi
+
+RETVAL=0
+USER=$HTTPFS_USER
+SERVICE="httpfs"
+DESC="Hadoop ${SERVICE} daemon"
+
+PIDFILE="${HADOOP_PID_DIR}/hadoop-${USER}-${SERVICE}.pid"
+LOCKFILE="${HADOOP_PID_DIR}/hadoop-${USER}-${SERVICE}.lock"
+
+export CATALINA_PID=$PIDFILE
+
+HTTPFS_HEAPSIZE=2048
+if [[ $HTTPFS_HEAPSIZE == +([0-9]) ]]; then
+  JAVA_HEAP_MAX="-Xmx${HTTPFS_HEAPSIZE}m"
+fi
+
+export CATALINA_OPTS="${CATALINA_OPTS} ${HTTPFS_CATALINA_OPTS} ${JAVA_HEAP_MAX}\
+ -Xloggc:${HDFS_LOG_DIR}/hadoop-${USER}-${SERVICE}-gc.log-`date +'%Y%m%d%H%M'`"
+
+start() {
+  checkstatus &>/dev/null
+
+  if [[ $RETVAL -eq 0 ]]; then
+    echo "$DESC already running"
+    RETVAL=0
+    return $RETVAL
+  fi
+
+  if [[ -e $LOCKFILE ]]; then
+    if [[ $RETVAL -ge 3 ]]; then
+      echo "$DESC: ignoring $LOCKFILE because process no longer exists"
+      rm $LOCKFILE
+      rm $PIDFILE
+    else
+      echo "$DESC cannot start, another process has the lock. rm ${LOCKFILE} to override"
+      RETVAL=1
+      return $RETVAL
+    fi
+  fi
+
+  touch $LOCKFILE
+
+  echo -n "Starting $DESC: "
+
+  /usr/local/bin/daemon -i -u ${USER} -c -o ${HADOOP_LOG_DIR}/daemon-${SERVICE}.out ${HADOOP_HOME}/sbin/httpfs.sh start
+
+  RETVAL=$?
+
+  if [ $RETVAL -ne 0 ]; then
+    echo failure
+    if [[ -e $PIDFILE ]]; then
+        kill `cat $PIDFILE`
+    fi
+
+    rm -f $PIDFILE $LOCKFILE
+  else
+    echo success
+  fi
+
+  return $RETVAL
+}
+
+stop() {
+  checkstatus &>/dev/null
+
+  if [[ $RETVAL -ne 0 ]]; then
+    echo "$DESC already stopped"
+    rm -f $PIDFILE $LOCKFILE
+    RETVAL=0
+    return $RETVAL
+  fi
+
+  echo -n "Stopping $DESC: "
+
+  /usr/local/bin/daemon -i -u ${USER} ${HADOOP_HOME}/sbin/httpfs.sh stop ${SERVICE}
+
+  RETVAL=$?
+
+  sleep 5
+
+
+  if [ $RETVAL -eq 0 ]; then
+    echo success
+    rm -f $PIDFILE $LOCKFILE
+  else
+    echo failure
+  fi
+
+  return $RETVAL
+}
+
+restart() {
+  stop
+  start
+}
+
+checkstatus(){
+  if [ ! -e $PIDFILE ]; then
+    echo "$DESC is not running (no pid file)"
+    RETVAL=1
+    return $RETVAL
+  fi
+
+  PID=`cat $PIDFILE`
+
+  if [ "${PID}x" == "x" ]; then
+     echo "$DESC is not running (no pid in $PIDFILE )"
+     RETVAL=2
+     return $RETVAL
+  fi
+
+  ps -p $PID > /dev/null
+
+  if [ $? -ne 0 ]; then
+    echo "$DESC is not running (pid $PID not found)"
+    RETVAL=3
+    return $RETVAL
+  fi
+
+  cmd=`ps -p ${PID} h -o%c`
+
+  if [ "xjava" != "x${cmd}" ]; then
+    echo "$DESC is not running (pid $PID not running java)"
+    RETVAL=4
+    return $RETVAL
+  fi
+
+  echo "$DESC (pid $PID) is running"
+  RETVAL=0
+  return $RETVAL
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+    checkstatus
+    ;;
+  restart)
+    restart
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|status|restart}"
+    exit 1
+esac
+
+exit $RETVAL

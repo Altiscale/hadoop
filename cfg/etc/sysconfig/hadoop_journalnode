@@ -1,0 +1,21 @@
+# DO NOT HAND EDIT
+
+export JAVA_HOME=/usr/java/default
+export PATH=$JAVA_HOME/bin:$PATH
+
+export HADOOP_HOME="/opt/hadoop"
+export HADOOP_PREFIX="/opt/hadoop"
+export HADOOP_CONF_DIR="/etc/hadoop"
+export HADOOP_COMMON_HOME="/opt/hadoop"
+export HADOOP_HDFS_HOME="/opt/hadoop"
+export HADOOP_LOG_DIR="/var/hadoop/hdfs/log"
+export HDFS_LOG_DIR="/var/hadoop/hdfs/log/"
+export HADOOP_PID_DIR="/var/hadoop/hdfs/run/"
+export HADOOP_HEAPSIZE="4000"
+export HADOOP_ROOT_LOGGER="INFO,console"
+export HTTPFS_CONFIG="/etc/hadoop"
+export HTTPFS_LOG="/var/hadoop/hdfs/log/"
+export HTTPFS_TEMP="/var/hadoop/hdfs/tmp/"
+export HADOOP_OPTS="-Djava.net.preferIPv4Stack=true "
+
+export PATH="/opt/hadoop/bin:/opt/hadoop/sbin:$PATH"

@@ -1,0 +1,181 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides: hadoop hadoop-hdfs-journalnode service
+# Required-Start:
+# Required-Stop:
+# Default-Start: 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: hadoop-hdfs-journalnode
+# Description: Hadoop journal service
+### END INIT INFO
+
+# Source function library.
+source /etc/rc.d/init.d/functions
+
+RETVAL=0
+NAME=hadoop-hdfs-journalnode
+
+# Source init configuration
+[ -f /etc/sysconfig/hadoop_journalnode ] && source /etc/sysconfig/hadoop_journalnode
+
+RUN_DIR=/var/hadoop/hdfs/run/
+LOG_DIR=/var/hadoop/hdfs/log/
+USER=hdfs
+GROUP=hadoop
+
+PID_FILE=$RUN_DIR/$NAME.pid
+LOCK_FILE=$RUN_DIR/$NAME.lock
+
+# set some sane defaults
+umask 0077
+
+# Sanity check env
+if [[ ! -e /opt/hadoop/sbin/hadoop-daemon.sh ]];
+then
+  echo "Failed to run /opt/hadoop/sbin/hadoop-daemon.sh"
+  exit 1
+fi
+
+start() {
+  checkstatus
+
+  if [[ $RETVAL -eq 0 ]]; then
+    echo "${NAME} already running"
+    RETVAL=0
+    return $RETVAL
+  fi
+
+  if [[ -e $LOCK_FILE ]]; then
+    echo "${NAME} cannot start, another process has the lock. rm ${LOCK_FILE} to override"
+    RETVAL=1
+    return $RETVAL
+  fi
+
+  # Increase the maximum file descriptors if we can
+
+  MAX_FD=65536
+
+  ulimit -n $MAX_FD
+  if [ "$?" -ne 0 ]; then
+     echo "Could not set journal fds to ${MAX_FD}"
+  fi
+
+  ulimit -c unlimited
+  if [ "$?" -ne 0 ]; then
+     echo "Could not core size to unlimited"
+  fi
+
+  if [[ ! -e $LOG_DIR ]]; then
+    mkdir -p $LOG_DIR
+    chown -R $USER.$GROUP $LOG_DIR
+  fi
+  if [[ ! -e $RUN_DIR ]]; then
+    mkdir -p $RUN_DIR
+    chown -R $USER.$GROUP $RUN_DIR
+  fi
+  touch $LOCK_FILE
+  cd ${RUN_DIR}
+  echo -n $"Starting ${NAME}... "
+  COMMAND="/opt/hadoop/sbin/hadoop-daemon.sh start journalnode &>> $LOG_DIR/altiscale_${NAME}_audit.log"
+  daemon --check $NAME --pidfile $PID_FILE --user $USER "$COMMAND"
+
+  RETVAL=$?
+
+  if [ $RETVAL -ne 0 ]; then
+    rm -f $LOCK_FILE
+  else
+    echo "started."
+  fi
+
+  return $RETVAL
+}
+
+stop() {
+  checkstatus
+
+  if [[ $RETVAL -ne 0 ]]; then
+    echo "${NAME} already stopped"
+    rm -f $LOCK_FILE
+    RETVAL=0
+    return $RETVAL
+  fi
+
+  echo "Stopping ${NAME}: "
+
+  PID=`cat $PID_FILE`
+  daemon --check $NAME --user $USER /opt/hadoop/sbin/hadoop-daemon.sh stop journalnode
+  RETVAL=$?
+  rm -f $LOCK_FILE
+  echo
+  return $RETVAL
+}
+
+restart() {
+  stop
+  start
+}
+
+checkstatus(){
+  if [ ! -e $PID_FILE ]; then
+    RETVAL=1
+    return $RETVAL
+  fi
+
+  PID=`cat $PID_FILE`
+
+  if [ "${PID}x" == "x" ]; then
+     RETVAL=2
+     return $RETVAL
+  fi
+
+  ps -p $PID > /dev/null
+
+  if [ $? -ne 0 ]; then
+    RETVAL=3
+    return $RETVAL
+  fi
+
+  user=`ps -p ${PID} h -o%u`
+  cmd=`ps -p ${PID} h -o%c`
+
+  if [ "x${USER}" != "x${user}" ]; then
+    RETVAL=4
+    return $RETVAL
+  fi
+
+  if [ "xjava" != "x${cmd}" ]; then
+    RETVAL=5
+    return $RETVAL
+  fi
+
+  RETVAL=0
+  return $RETVAL
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  status)
+    checkstatus
+
+    if [ $RETVAL -ne 0 ]; then
+      echo "DOWN"
+    else
+      echo "UP"
+    fi
+
+    ;;
+  restart)
+    restart
+    ;;
+  *)
+    echo $"Usage: $0 {start|stop|status|restart}"
+    exit 1
+esac
+
+exit $RETVAL

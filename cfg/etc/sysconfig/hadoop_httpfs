@@ -1,0 +1,7 @@
+HTTPFS_CATALINA_OPTS="-XX:CMSInitiatingOccupancyFraction=84 -XX:+UseCMSInitiatingOccupancyOnly\
+ -XX:-CMSConcurrentMTEnabled -XX:ParallelGCThreads=8 -XX:+UseConcMarkSweepGC\
+ -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=20M -verbose:gc -XX:+PrintGCDetails\
+ -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime\
+ -XX:+UseGCLogFileRotation -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp -Xmx2048m\
+ -XX:CMSInitiatingOccupancyFraction=84 -XX:+UseCMSInitiatingOccupancyOnly\
+ -XX:-CMSConcurrentMTEnabled -XX:ParallelGCThreads=8 -XX:+UseConcMarkSweepGC"

@@ -1,0 +1,7 @@
+OOM_ADJ=-17
+NOFILE=65536
+NPROC=8192
+TIMELINESERVER_OPTS="-XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/tmp\
+ -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=20M -verbose:gc -XX:+PrintGCDetails\
+ -XX:+PrintGCTimeStamps -XX:+PrintGCDateStamps -XX:+PrintGCApplicationStoppedTime\
+ -XX:+UseGCLogFileRotation"
