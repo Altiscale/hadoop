@@ -116,10 +116,11 @@ export CONFIG_FILES="--config-files /etc/hadoop-${ARTIFACT_VERSION} \
 #
 #------------------------------------------------------------------------------------
 
-ALTISCALE_RELEASE="${ALTISCALE_RELEASE:-0.1.0}"
+ALTISCALE_RELEASE="${ALTISCALE_RELEASE:-5.0.0}"
+GIT_REPO="https://github.com/Altiscale/hadoop"
 export RPM_NAME=$(echo alti-hadoop-"${ARTIFACT_VERSION}")
 export RPM_DESCRIPTION="Apache Hadoop ${ARTIFACT_VERSION}\n\n${DESCRIPTION}"
-export RPM_DIR="${RPM_DIR:-"${INSTALL_DIR}/hadoop-artifact/"}"
+export RPM_DIR="${RPM_DIR:-"${INSTALL_DIR}/hadoop-artifact"}"
 mkdir --mode=0755 -p "${RPM_DIR}"
 
 cd ${RPM_DIR}
@@ -133,7 +134,7 @@ fpm --verbose \
 --provides libhdfs \
 --replaces alti-hadoop \
 --depends 'lzo > 2.0' \
---url ${GITREPO} \
+--url ${GIT_REPO} \
 --license "Apache License v2" \
 -s dir \
 -t rpm \
@@ -164,4 +165,7 @@ ${CONFIG_FILES} \
 -C ${INSTALL_DIR} \
 opt etc
 
+ls -l 
+mv "${RPM_DIR}"/"${RPM_NAME}"-"${ALTISCALE_RELEASE}"-"${DATE_STRING}".x86_64.rpm "${RPM_DIR}"/alti-hadoop-"${XMAKE_PROJECT_VERSION}".rpm
+ls -l
 exit 0
