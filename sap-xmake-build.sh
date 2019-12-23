@@ -165,8 +165,7 @@ ${CONFIG_FILES} \
 --rpm-group hadoop \
 -C ${INSTALL_DIR} \
 opt etc
-
-ls -l 
+ 
 mv "${RPM_DIR}"/"${RPM_NAME}"-"${ALTISCALE_RELEASE}"-"${DATE_STRING}".x86_64.rpm "${RPM_DIR}"/alti-hadoop-"${XMAKE_PROJECT_VERSION}".rpm
-ls -l
+
 exit 0
