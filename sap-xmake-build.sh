@@ -77,9 +77,9 @@ mv "${OPT_DIR}"/hadoop-"${ARTIFACT_VERSION}"/etc/hadoop "${OPT_DIR}"/hadoop-"${A
 
 # Add init.d scripts and sysconfig
 mkdir --mode=0755 -p "${INSTALL_DIR}"/etc/rc.d/init.d
-cp "${MY_DIR}"/cfg/etc/init.d/* "${INSTALL_DIR}"/etc/rc.d/init.d
+cp "${MY_DIR}"/sap-xmake-etc/init.d/* "${INSTALL_DIR}"/etc/rc.d/init.d
 mkdir --mode=0755 -p "${INSTALL_DIR}"/etc/sysconfig
-cp "${MY_DIR}"/cfg/etc/sysconfig/* "${INSTALL_DIR}"/etc/sysconfig
+cp "${MY_DIR}"/sap-xmake-etc/sysconfig/* "${INSTALL_DIR}"/etc/sysconfig
 
 #------------------------------------------------------------------------------------
 #
