@@ -102,12 +102,9 @@ cp -P "${TMP_DIR}"/lib/libgplcompression.* "${OPT_DIR}"/hadoop-"${ARTIFACT_VERSI
 # Fix all permissions
 chmod 755 "${INSTALL_DIR}"/opt/hadoop-"${ARTIFACT_VERSION}"/sbin/*.sh
 chmod 755 "${INSTALL_DIR}"/opt/hadoop-"${ARTIFACT_VERSION}"/sbin/*.cmd
-chmod 644 "${INSTALL_DIR}"/opt/hadoop-"${ARTIFACT_VERSION}"/share/hadoop/httpfs/tomcat/conf/*
 
 # All config files:
 export CONFIG_FILES="--config-files /etc/hadoop-${ARTIFACT_VERSION} \
-  --config-files /opt/hadoop-${ARTIFACT_VERSION}/share/hadoop/httpfs/tomcat/conf \
-  --config-files /opt/hadoop-${ARTIFACT_VERSION}/share/hadoop/httpfs/tomcat/webapps/webhdfs/WEB-INF/web.xml \
   --config-files /etc/sysconfig "
 
 #------------------------------------------------------------------------------------
