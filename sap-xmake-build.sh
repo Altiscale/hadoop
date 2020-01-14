@@ -38,8 +38,9 @@ export TOMCAT_VERSION=7.0.42
 
 
 mvn versions:set -DnewVersion=${ARTIFACT_VERSION}
+export RUN_UNIT_TESTS=true
 if [ "$RUN_UNIT_TESTS" == "true" ]; then
-  mvn -Pdist,docs,src,native --fail-never -Dtar -Dbundle.snappy  -Dsnappy.lib=/usr/lib64 -Drequire.fuse=true -Drequire.snappy -Dcontainer-executor.conf.dir=/etc/hadoop clean install
+  mvn -Pdist,docs,src,native --fail-never -Dtar -Dbundle.snappy  -Dsnappy.lib=/usr/lib64 -Drequire.fuse=true -Drequire.snappy -Dcontainer-executor.conf.dir=/etc/hadoop -Dtomcat.download.url=$TOMCAT_DOWNLOAD_URL -Dtomcat.version=$TOMCAT_VERSION clean install
 else
   mvn -Pdist,docs,src,native -Dtar -DskipTests -Dbundle.snappy -Dsnappy.lib=/usr/lib64 -Drequire.fuse=true -Drequire.snappy -Dcontainer-executor.conf.dir=/etc/hadoop -Dtomcat.download.url=$TOMCAT_DOWNLOAD_URL -Dtomcat.version=$TOMCAT_VERSION clean install
 fi
