@@ -508,14 +508,14 @@
                     <mkdir dir="downloads"/>
                     <get
                         src="${tomcat.download.url}"
-                        dest="downloads/apache-tomcat-${tomcat.version}.zip" verbose="true" skipexisting="true"/>
+                        dest="downloads/apache-tomcat-${tomcat.version}.tar.gz" verbose="true" skipexisting="true"/>
                     <delete dir="${project.build.directory}/tomcat.exp"/>
                     <mkdir dir="${project.build.directory}/tomcat.exp"/>
 
                     <!-- Using Unix script to preserve file permissions -->
                     <echo file="${project.build.directory}/tomcat-untar.sh">
                       cd "${project.build.directory}/tomcat.exp"
-                      unzip ../../downloads/apache-tomcat-${tomcat.version}.zip
+                      gzip -cd ../../downloads/apache-tomcat-${tomcat.version}.tar.gz | tar xf -
                     </echo>
                     <exec executable="sh" dir="${project.build.directory}" failonerror="true">
                       <arg line="./tomcat-untar.sh"/>

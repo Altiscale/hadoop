@@ -33,21 +33,20 @@ export MAVEN_OPTS="-Xms256m -Xmx512m"
 
 # pointing the build to download tomcat from nexus repo instead of the internet
 # need to also change the pom explicitly to unzip the file since no tar.gz file is available in nexus
-export TOMCAT_DOWNLOAD_URL=http://nexus.wdf.sap.corp:8081/nexus/content/groups/build.snapshots/org/apache/tomcat/tomcat/7.0.42/tomcat-7.0.42.zip
-export TOMCAT_VERSION=7.0.42
-
+export TOMCAT_VERSION=6.0.48
+export TOMCAT_DOWNLOAD_URL=http://nexus.wdf.sap.corp:8081/nexus/content/groups/build.milestones/org/apache/tomcat/tomcat/${TOMCAT_VERSION}/tomcat-${TOMCAT_VERSION}.tar.gz
 
 mvn versions:set -DnewVersion=${ARTIFACT_VERSION}
-export RUN_UNIT_TESTS=true
+
 if [ "$RUN_UNIT_TESTS" == "true" ]; then
-  mvn -Pdist,docs,src,native --fail-never -Dtar -Dbundle.snappy  -Dsnappy.lib=/usr/lib64 -Drequire.fuse=true -Drequire.snappy -Dcontainer-executor.conf.dir=/etc/hadoop -Dtomcat.download.url=$TOMCAT_DOWNLOAD_URL -Dtomcat.version=$TOMCAT_VERSION clean install
+  mvn -Pdist,docs,src,native --fail-never -Dtar -Dbundle.snappy  -Dsnappy.lib=/usr/lib64 -Drequire.fuse=true -Drequire.snappy -Dcontainer-executor.conf.dir=/etc/hadoop -Dtomcat.download.url=${TOMCAT_DOWNLOAD_URL} -Dtomcat.version=${TOMCAT_VERSION} clean install
 else
-  mvn -Pdist,docs,src,native -Dtar -DskipTests -Dbundle.snappy -Dsnappy.lib=/usr/lib64 -Drequire.fuse=true -Drequire.snappy -Dcontainer-executor.conf.dir=/etc/hadoop -Dtomcat.download.url=$TOMCAT_DOWNLOAD_URL -Dtomcat.version=$TOMCAT_VERSION clean install
+  mvn -Pdist,docs,src,native -Dtar -DskipTests -Dbundle.snappy -Dsnappy.lib=/usr/lib64 -Drequire.fuse=true -Drequire.snappy -Dcontainer-executor.conf.dir=/etc/hadoop -Dtomcat.download.url=${TOMCAT_DOWNLOAD_URL} -Dtomcat.version=${TOMCAT_VERSION} clean install
 fi
 
 
 if [[ "$?" -ne 0 ]] ; then
-  echo 'Error compiling and packaging tez'; exit 1
+  echo 'Error compiling and packaging hadoop'; exit 1
 fi
 
 #------------------------------------------------------------------------------------
@@ -163,7 +162,7 @@ ${CONFIG_FILES} \
 --rpm-group hadoop \
 -C ${INSTALL_DIR} \
 opt etc
- 
+
 mv "${RPM_DIR}"/"${RPM_NAME}"-"${ALTISCALE_RELEASE}"-"${DATE_STRING}".x86_64.rpm "${RPM_DIR}"/alti-hadoop-"${XMAKE_PROJECT_VERSION}".rpm
 
 exit 0
