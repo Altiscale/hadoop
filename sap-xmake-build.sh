@@ -115,7 +115,7 @@ export CONFIG_FILES="--config-files /etc/hadoop-${ARTIFACT_VERSION} \
 
 ALTISCALE_RELEASE="${ALTISCALE_RELEASE:-5.0.0}"
 GIT_REPO="https://github.com/Altiscale/hadoop"
-DATE_STRING=$(date +%Y%m%d%H%M%S)
+DATE_STRING=$(date +%Y%m%d%H%M)
 export RPM_NAME=$(echo alti-hadoop-"${ARTIFACT_VERSION}")
 export RPM_DESCRIPTION="Apache Hadoop ${ARTIFACT_VERSION}\n\n${DESCRIPTION}"
 export RPM_DIR="${RPM_DIR:-"${INSTALL_DIR}/hadoop-artifact"}"
